@@ -19,14 +19,85 @@
         <div class="panel__header">
           <h2 id="input-panel-title">Ввод данных</h2>
         </div>
-        <div class="panel__body" aria-live="polite"></div>
+        <div class="panel__body" aria-live="polite">
+          <form id="training-form" class="form">
+            <div class="form__row">
+              <label for="input-weight">Рабочий вес (кг)</label>
+              <input
+                id="input-weight"
+                name="weight"
+                type="number"
+                min="1"
+                step="0.5"
+                required
+              />
+            </div>
+
+            <div class="form__row">
+              <label for="input-reps">Повторения</label>
+              <input
+                id="input-reps"
+                name="reps"
+                type="number"
+                min="1"
+                step="1"
+                required
+              />
+            </div>
+
+            <div class="form__row">
+              <label for="movement-type">Тип движения</label>
+              <select id="movement-type" name="movementType">
+                <option value="compound">Базовое</option>
+                <option value="isolation">Изолированное</option>
+              </select>
+            </div>
+
+            <div class="form__row">
+              <label for="training-goal">Цель</label>
+              <select id="training-goal" name="goal">
+                <option value="strength">Сила</option>
+                <option value="hypertrophy">Гипертрофия</option>
+                <option value="endurance">Выносливость</option>
+              </select>
+            </div>
+
+            <div class="form__row">
+              <label for="scheme-select">Схема</label>
+              <select id="scheme-select" name="scheme">
+                <option value="top-set">Top Set</option>
+                <option value="linear-5x5">Линейная 5×5</option>
+                <option value="double-progression">Double Progression</option>
+              </select>
+            </div>
+
+            <div class="form__row">
+              <label for="weeks-count">Кол-во недель</label>
+              <input
+                id="weeks-count"
+                name="weeks"
+                type="number"
+                min="1"
+                max="12"
+                step="1"
+                value="4"
+              />
+            </div>
+
+            <button id="generate-program" type="submit" class="button">
+              Generate Program
+            </button>
+          </form>
+        </div>
       </section>
 
       <section class="panel" id="result-panel" aria-labelledby="result-panel-title">
         <div class="panel__header">
           <h2 id="result-panel-title">План тренировки</h2>
         </div>
-        <div class="panel__body" aria-live="polite"></div>
+        <div class="panel__body" aria-live="polite">
+          <div id="result"></div>
+        </div>
       </section>
 
       <section class="panel" id="programs-panel" aria-labelledby="programs-panel-title">
