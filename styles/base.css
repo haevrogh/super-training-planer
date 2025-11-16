@@ -132,12 +132,13 @@ label {
   font-size: 1rem;
   font-weight: 500;
   cursor: pointer;
-  transition: background 0.2s ease, box-shadow 0.2s ease;
+  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
 .ui-button:hover {
-  background: #0a84ff;
-  box-shadow: 0 4px 12px rgba(10, 132, 255, 0.3);
+  background: #1c8bff;
+  box-shadow: 0 6px 18px rgba(28, 139, 255, 0.35);
+  transform: translateY(-1px);
 }
 
 .program-container {
@@ -156,12 +157,20 @@ label {
   padding: 16px 20px;
   margin-bottom: 24px;
   box-shadow: 0 2px 6px var(--shadow);
+  transition: background 0.2s ease, box-shadow 0.2s ease;
 }
 
 .week-title {
   font-size: 18px;
-  font-weight: 600;
+  font-weight: 700;
   margin-bottom: 12px;
+  letter-spacing: 0.01em;
+}
+
+[data-week]:hover {
+  background: rgba(0, 0, 0, 0.03);
+  box-shadow: 0 6px 18px var(--shadow);
+  transition: background 0.15s ease, box-shadow 0.15s ease;
 }
 
 .session-card {
@@ -170,6 +179,13 @@ label {
   padding: 12px 16px;
   margin-bottom: 12px;
   box-shadow: 0 1px 4px var(--shadow);
+  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.session-card:hover {
+  background: #ffffff;
+  box-shadow: 0 6px 16px var(--shadow);
+  transform: translateY(-1px);
 }
 
 .session-day {
@@ -215,6 +231,14 @@ label {
   padding: 12px 16px;
   border-radius: 10px;
   box-shadow: 0 1px 4px var(--shadow);
+  cursor: pointer;
+  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.program-list-item:hover {
+  background: #f7f8fa;
+  box-shadow: 0 6px 16px var(--shadow);
+  transform: translateY(-1px);
 }
 
 .program-list-actions {
@@ -231,6 +255,14 @@ label {
   cursor: pointer;
   border: none;
   font-size: 0.9rem;
+  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.program-list-btn:hover,
+.program-list-button:hover {
+  background: #1c8bff;
+  box-shadow: 0 6px 16px rgba(28, 139, 255, 0.4);
+  transform: translateY(-1px);
 }
 
 @media (max-width: 600px) {
