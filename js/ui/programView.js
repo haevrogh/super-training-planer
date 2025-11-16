@@ -42,10 +42,11 @@ function createSessionCard(session) {
 function createWeekBlock(week, fallbackNumber) {
   const weekBlock = document.createElement('div');
   weekBlock.className = 'week-block';
+  const weekNumber = Number(week?.weekNumber) || fallbackNumber;
+  weekBlock.dataset.week = String(weekNumber);
 
   const title = document.createElement('h3');
   title.className = 'week-title';
-  const weekNumber = Number(week?.weekNumber) || fallbackNumber;
   title.textContent = `Week ${weekNumber}`;
   weekBlock.appendChild(title);
 
