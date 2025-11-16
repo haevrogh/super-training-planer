@@ -91,3 +91,66 @@ body {
     grid-column: span 2;
   }
 }
+
+.panel-programs .panel__body {
+  padding: 0;
+  border: none;
+  background: transparent;
+  min-height: auto;
+}
+
+.program-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.program-list-empty {
+  margin: 0;
+  padding: 16px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.program-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border: 1px solid var(--border-soft);
+  border-radius: calc(var(--radius-large) - 8px);
+  background: var(--surface);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
+}
+
+.program-list-title {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.program-list-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.program-list-button {
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  padding: 6px 16px;
+  background: #f6f7fb;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.program-list-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+}
+
+.program-list-button:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
