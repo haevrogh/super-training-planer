@@ -9,6 +9,7 @@ function getResultContainer() {
 function createBackoffList(backoffSets) {
   const list = document.createElement('ul');
   list.className = 'session-backoffs';
+  list.setAttribute('aria-label', 'Дополнительные подходы');
 
   const entries = Array.isArray(backoffSets) && backoffSets.length > 0 ? backoffSets : ['—'];
 
@@ -24,6 +25,8 @@ function createBackoffList(backoffSets) {
 function createSessionCard(session) {
   const card = document.createElement('div');
   card.className = 'session-card';
+  card.setAttribute('role', 'group');
+  card.tabIndex = 0;
 
   const day = document.createElement('div');
   day.className = 'session-day';
@@ -35,6 +38,8 @@ function createSessionCard(session) {
 
   const backoffList = createBackoffList(session?.backoffSets);
 
+  const sessionLabel = session?.dayLabel ? `Тренировка ${session.dayLabel}` : 'Тренировка';
+  card.setAttribute('aria-label', `${sessionLabel}. Топ-сет: ${session?.topSet || '—'}`);
   card.append(day, topSet, backoffList);
   return card;
 }
@@ -44,6 +49,8 @@ function createWeekBlock(week, fallbackNumber) {
   weekBlock.className = 'week-block';
   const weekNumber = Number(week?.weekNumber) || fallbackNumber;
   weekBlock.dataset.week = String(weekNumber);
+  weekBlock.setAttribute('role', 'region');
+  weekBlock.setAttribute('aria-label', `Неделя ${weekNumber}`);
 
   const title = document.createElement('h3');
   title.className = 'week-title';
@@ -62,6 +69,8 @@ function createWeekBlock(week, fallbackNumber) {
 function buildProgramContainer(program) {
   const container = document.createElement('div');
   container.className = 'program-container';
+  container.setAttribute('role', 'region');
+  container.setAttribute('aria-label', 'Сгенерированная программа тренировки');
 
   const title = document.createElement('h2');
   title.className = 'program-title';

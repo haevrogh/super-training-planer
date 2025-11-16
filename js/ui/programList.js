@@ -10,14 +10,18 @@ function createEmptyState() {
   const emptyState = document.createElement('p');
   emptyState.className = 'program-list-empty';
   emptyState.textContent = 'Пока нет сохранённых программ';
+  emptyState.setAttribute('role', 'status');
+  emptyState.setAttribute('aria-live', 'polite');
   return emptyState;
 }
 
-function createActionButton(label, onClick) {
+function createActionButton(label, onClick, ariaLabel) {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'program-list-button';
   button.textContent = label;
+  button.setAttribute('role', 'button');
+  button.setAttribute('aria-label', ariaLabel || label);
   button.addEventListener('click', (event) => {
     event.preventDefault();
 
@@ -31,21 +35,34 @@ function createActionButton(label, onClick) {
 function createProgramListItem(program, callbacks) {
   const item = document.createElement('div');
   item.className = 'program-list-item';
+  item.setAttribute('role', 'listitem');
+  item.tabIndex = 0;
 
   const title = document.createElement('span');
   title.className = 'program-list-title';
   title.textContent = program?.name || 'Без названия';
+  item.setAttribute('aria-label', `Программа: ${title.textContent}`);
 
   const actions = document.createElement('div');
   actions.className = 'program-list-actions';
+  actions.setAttribute('role', 'group');
+  actions.setAttribute('aria-label', 'Действия программы');
 
-  const selectButton = createActionButton('Выбрать', () => {
-    callbacks?.onSelect?.(program.id);
-  });
+  const selectButton = createActionButton(
+    'Выбрать',
+    () => {
+      callbacks?.onSelect?.(program.id);
+    },
+    `Выбрать программу ${title.textContent}`,
+  );
 
-  const deleteButton = createActionButton('Удалить', () => {
-    callbacks?.onDelete?.(program.id);
-  });
+  const deleteButton = createActionButton(
+    'Удалить',
+    () => {
+      callbacks?.onDelete?.(program.id);
+    },
+    `Удалить программу ${title.textContent}`,
+  );
 
   actions.append(selectButton, deleteButton);
   item.append(title, actions);
@@ -70,6 +87,8 @@ export function renderProgramList(programs = [], callbacks = {}) {
   }
 
   clearProgramList();
+  container.setAttribute('role', 'list');
+  container.setAttribute('aria-label', 'Сохранённые программы');
 
   if (!Array.isArray(programs) || programs.length === 0) {
     container.appendChild(createEmptyState());
