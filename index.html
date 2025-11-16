@@ -14,7 +14,7 @@
       </div>
     </header>
 
-    <main class="app-container">
+    <main class="app-container" aria-label="Генератор силовой программы">
       <section class="panel" id="input-panel" aria-labelledby="input-panel-title">
         <div class="panel__header">
           <h2 id="input-panel-title" class="panel-title">Ввод данных</h2>
@@ -87,7 +87,13 @@
               />
             </div>
 
-            <button id="generate-program" type="submit" class="ui-button">
+            <button
+              id="generate-program"
+              type="submit"
+              class="ui-button"
+              aria-label="Сгенерировать новую программу"
+              role="button"
+            >
               Generate Program
             </button>
           </form>
@@ -108,7 +114,7 @@
           <h2 id="programs-panel-title" class="panel-title">Мои программы</h2>
         </div>
         <div class="panel__body" aria-live="polite">
-          <div id="program-list" class="program-list"></div>
+          <div id="program-list" class="program-list" role="list"></div>
         </div>
       </section>
     </main>
