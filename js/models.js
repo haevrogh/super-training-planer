@@ -1,8 +1,13 @@
 // Data model factory functions
 
-export function createUserInput() {
+export function createUserInput(weight, reps, movementType, goal, scheme, weeks) {
   return {
-    // TODO: define user input fields
+    weight: Number(weight),
+    reps: Number(reps),
+    movementType: movementType || 'compound',
+    goal: goal || '',
+    scheme: scheme || '',
+    weeks: Number(weeks) || 0,
   };
 }
 

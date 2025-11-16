@@ -1,13 +1,87 @@
-// UI for input form — no business logic
+// UI for input form — collects user data only
+
+let formElement;
+let generateButton;
+
+function getFormElement() {
+  if (formElement) {
+    return formElement;
+  }
+
+  formElement = document.getElementById('training-form');
+  return formElement;
+}
+
+function getGenerateButton() {
+  if (generateButton) {
+    return generateButton;
+  }
+
+  generateButton = document.getElementById('generate-program');
+  return generateButton;
+}
 
 export function initForm() {
-  // TODO: implement form initialization
+  const form = getFormElement();
+
+  if (!form) {
+    console.warn('Training form is missing in DOM.');
+    return;
+  }
+
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+  });
 }
 
 export function readFormInput() {
-  // TODO: implement reading form fields
+  const form = getFormElement();
+
+  if (!form) {
+    throw new Error('Форма не найдена.');
+  }
+
+  const formData = new FormData(form);
+  const weight = Number(formData.get('weight'));
+  const reps = Number(formData.get('reps'));
+  const movementType = formData.get('movementType') || 'compound';
+  const goal = formData.get('goal') || '';
+  const scheme = formData.get('scheme') || '';
+  const weeks = Number(formData.get('weeks')) || 0;
+
+  if (!Number.isFinite(weight) || weight <= 0) {
+    throw new Error('Вес должен быть больше нуля.');
+  }
+
+  if (!Number.isFinite(reps) || reps <= 0) {
+    throw new Error('Повторения должны быть больше нуля.');
+  }
+
+  return {
+    weight,
+    reps,
+    movementType,
+    goal,
+    scheme,
+    weeks,
+  };
 }
 
 export function onGenerateProgram(callback) {
-  // TODO: implement event binding for program generation
+  const button = getGenerateButton();
+
+  if (!button || typeof callback !== 'function') {
+    return;
+  }
+
+  button.addEventListener('click', (event) => {
+    event.preventDefault();
+
+    try {
+      const input = readFormInput();
+      callback(input);
+    } catch (error) {
+      console.warn(error.message);
+    }
+  });
 }
