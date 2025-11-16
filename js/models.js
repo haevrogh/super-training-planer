@@ -11,20 +11,27 @@ export function createUserInput(weight, reps, movementType, goal, scheme, weeks)
   };
 }
 
-export function createProgram() {
+export function createProgram({ id, name, userInput, oneRm, weeks } = {}) {
   return {
-    // TODO: define program structure
+    id: id || '',
+    name: name || '',
+    userInput: userInput || null,
+    oneRm: Number(oneRm) || 0,
+    weeks: Array.isArray(weeks) ? weeks : [],
   };
 }
 
-export function createProgramWeek() {
+export function createProgramWeek({ weekNumber, sessions } = {}) {
   return {
-    // TODO: define week structure
+    weekNumber: Number(weekNumber) || 1,
+    sessions: Array.isArray(sessions) ? sessions : [],
   };
 }
 
-export function createProgramSession() {
+export function createProgramSession({ dayLabel, topSet, backoffSets } = {}) {
   return {
-    // TODO: define session structure
+    dayLabel: dayLabel || '',
+    topSet: topSet || '',
+    backoffSets: Array.isArray(backoffSets) ? backoffSets : [],
   };
 }
