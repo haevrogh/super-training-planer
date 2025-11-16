@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Strength Program Calculator</title>
+    <link rel="stylesheet" href="styles/base.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="app-header__content">
+        <h1>Strength Program Calculator</h1>
+        <p class="tagline">Минималистичный планировщик силовых программ</p>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="panel" id="input-panel" aria-labelledby="input-panel-title">
+        <div class="panel__header">
+          <h2 id="input-panel-title">Ввод данных</h2>
+        </div>
+        <div class="panel__body" aria-live="polite"></div>
+      </section>
+
+      <section class="panel" id="result-panel" aria-labelledby="result-panel-title">
+        <div class="panel__header">
+          <h2 id="result-panel-title">План тренировки</h2>
+        </div>
+        <div class="panel__body" aria-live="polite"></div>
+      </section>
+
+      <section class="panel" id="programs-panel" aria-labelledby="programs-panel-title">
+        <div class="panel__header">
+          <h2 id="programs-panel-title">Мои программы</h2>
+        </div>
+        <div class="panel__body" aria-live="polite"></div>
+      </section>
+    </main>
+
+    <script type="module" src="js/main.js"></script>
+  </body>
+</html>
