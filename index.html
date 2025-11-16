@@ -14,10 +14,10 @@
       </div>
     </header>
 
-    <main class="layout">
+    <main class="app-container">
       <section class="panel" id="input-panel" aria-labelledby="input-panel-title">
         <div class="panel__header">
-          <h2 id="input-panel-title">Ввод данных</h2>
+          <h2 id="input-panel-title" class="panel-title">Ввод данных</h2>
         </div>
         <div class="panel__body" aria-live="polite">
           <form id="training-form" class="form">
@@ -30,6 +30,7 @@
                 min="1"
                 step="0.5"
                 required
+                class="ui-input"
               />
             </div>
 
@@ -42,12 +43,13 @@
                 min="1"
                 step="1"
                 required
+                class="ui-input"
               />
             </div>
 
             <div class="form__row">
               <label for="movement-type">Тип движения</label>
-              <select id="movement-type" name="movementType">
+              <select id="movement-type" name="movementType" class="ui-select">
                 <option value="compound">Базовое</option>
                 <option value="isolation">Изолированное</option>
               </select>
@@ -55,7 +57,7 @@
 
             <div class="form__row">
               <label for="training-goal">Цель</label>
-              <select id="training-goal" name="goal">
+              <select id="training-goal" name="goal" class="ui-select">
                 <option value="strength">Сила</option>
                 <option value="hypertrophy">Гипертрофия</option>
                 <option value="endurance">Выносливость</option>
@@ -64,7 +66,7 @@
 
             <div class="form__row">
               <label for="scheme-select">Схема</label>
-              <select id="scheme-select" name="scheme">
+              <select id="scheme-select" name="scheme" class="ui-select">
                 <option value="top-set">Top Set</option>
                 <option value="linear-5x5">Линейная 5×5</option>
                 <option value="double-progression">Double Progression</option>
@@ -81,10 +83,11 @@
                 max="12"
                 step="1"
                 value="4"
+                class="ui-input"
               />
             </div>
 
-            <button id="generate-program" type="submit" class="button">
+            <button id="generate-program" type="submit" class="ui-button">
               Generate Program
             </button>
           </form>
@@ -93,7 +96,7 @@
 
       <section class="panel" id="result-panel" aria-labelledby="result-panel-title">
         <div class="panel__header">
-          <h2 id="result-panel-title">План тренировки</h2>
+          <h2 id="result-panel-title" class="panel-title">План тренировки</h2>
         </div>
         <div class="panel__body" aria-live="polite">
           <div id="result"></div>
@@ -102,7 +105,7 @@
 
       <section class="panel panel-programs" id="programs-panel" aria-labelledby="programs-panel-title">
         <div class="panel__header">
-          <h2 id="programs-panel-title">Мои программы</h2>
+          <h2 id="programs-panel-title" class="panel-title">Мои программы</h2>
         </div>
         <div class="panel__body" aria-live="polite">
           <div id="program-list" class="program-list"></div>
