@@ -9,6 +9,7 @@ const METRIC_CONFIGS = [
 ];
 
 let chartInstanceCounter = 0;
+let intensitySummaryCounter = 0;
 
 function getResultContainer() {
   return document.getElementById(RESULT_CONTAINER_ID);
@@ -203,11 +204,48 @@ function createIntensitySummary(summary) {
   wrapper.className = 'session-intensity';
   wrapper.setAttribute('aria-label', 'Сводка интенсивности');
 
+  const previewParts = [];
+  const tonnage = formatMetricValue(summary.tonnage, 'кг');
+  const mti = formatMetricValue(summary.mti);
+
+  if (tonnage !== '—') {
+    previewParts.push(`Тоннаж ${tonnage}`);
+  }
+
+  if (mti !== '—') {
+    previewParts.push(`MTI ${mti}`);
+  }
+
+  if (previewParts.length === 0) {
+    previewParts.push('Интенсивность не рассчитана');
+  }
+
+  const preview = document.createElement('div');
+  preview.className = 'session-intensity__preview';
+  preview.textContent = previewParts.join(' · ');
+
+  const toggle = document.createElement('button');
+  toggle.type = 'button';
+  toggle.className = 'session-intensity__toggle';
+  toggle.textContent = 'Показать метрики';
+  toggle.setAttribute('aria-expanded', 'false');
+
+  const details = document.createElement('div');
+  details.className = 'session-intensity__details';
+  details.hidden = true;
+  intensitySummaryCounter += 1;
+  const detailsId = `session-intensity-${intensitySummaryCounter}`;
+  details.id = detailsId;
+  toggle.setAttribute('aria-controls', detailsId);
+
+  const metricsGrid = document.createElement('div');
+  metricsGrid.className = 'session-metric-grid';
+
   const metrics = [
-    { label: 'Тоннаж', value: formatMetricValue(summary.tonnage, 'кг') },
+    { label: 'Тоннаж', value: tonnage },
     {
       label: 'MTI',
-      value: formatMetricValue(summary.mti),
+      value: mti,
       hint: 'Mechanical Tension Index — связь с ростом силы и мышц',
     },
     {
@@ -239,9 +277,19 @@ function createIntensitySummary(summary) {
     value.textContent = metric.value;
 
     metricCard.append(label, value);
-    wrapper.appendChild(metricCard);
+    metricsGrid.appendChild(metricCard);
   });
 
+  details.appendChild(metricsGrid);
+
+  toggle.addEventListener('click', () => {
+    const willShow = details.hidden;
+    details.hidden = !willShow;
+    toggle.setAttribute('aria-expanded', String(willShow));
+    toggle.textContent = willShow ? 'Скрыть метрики' : 'Показать метрики';
+  });
+
+  wrapper.append(preview, toggle, details);
   return wrapper;
 }
 
@@ -276,12 +324,13 @@ function createWorkSetsSection({ topSet, backoffSets }) {
 
   entries.forEach((entry) => {
     const item = document.createElement('li');
-    item.textContent = entry.text;
+    item.className = 'session-worksets__item';
 
     if (entry.className) {
       item.classList.add(entry.className);
     }
 
+    item.textContent = entry.text;
     list.appendChild(item);
   });
 
@@ -309,15 +358,81 @@ function createRestSection(restInterval) {
   return wrapper;
 }
 
+function formatAdditionalSetsLabel(count) {
+  if (!Number.isFinite(count) || count <= 0) {
+    return '';
+  }
+
+  if (count === 1) {
+    return '+1 доп. подход';
+  }
+
+  if (count >= 5) {
+    return `+${count} доп. подходов`;
+  }
+
+  return `+${count} доп. подхода`;
+}
+
+function buildSessionSummaryText(session) {
+  if (!session) {
+    return 'Подходы не указаны';
+  }
+
+  const summaryParts = [];
+
+  if (session.topSet) {
+    summaryParts.push(session.topSet);
+  }
+
+  const backoffs = Array.isArray(session.backoffSets)
+    ? session.backoffSets
+        .map((item) => {
+          if (item === null || item === undefined) {
+            return '';
+          }
+
+          return String(item).trim();
+        })
+        .filter((item) => item.length > 0)
+    : [];
+
+  if (backoffs.length > 0) {
+    summaryParts.push(backoffs[0]);
+    const extraCount = backoffs.length - 1;
+
+    const extraLabel = formatAdditionalSetsLabel(extraCount);
+
+    if (extraLabel) {
+      summaryParts.push(extraLabel);
+    }
+  }
+
+  if (summaryParts.length === 0) {
+    return 'Подходы не указаны';
+  }
+
+  return summaryParts.join(' · ');
+}
+
 function createSessionCard(session) {
   const card = document.createElement('div');
   card.className = 'session-card';
   card.setAttribute('role', 'group');
   card.tabIndex = 0;
 
+  const header = document.createElement('div');
+  header.className = 'session-card__header';
+
   const day = document.createElement('div');
   day.className = 'session-day';
   day.textContent = session?.dayLabel || '—';
+
+  const summary = document.createElement('div');
+  summary.className = 'session-card__summary';
+  summary.textContent = buildSessionSummaryText(session);
+
+  header.append(day, summary);
 
   const intensitySummary = createIntensitySummary(session?.intensitySummary);
   const workSetsSection = createWorkSetsSection(session || {});
@@ -325,7 +440,7 @@ function createSessionCard(session) {
 
   const sessionLabel = session?.dayLabel ? `Тренировка ${session.dayLabel}` : 'Тренировка';
   card.setAttribute('aria-label', `${sessionLabel}. Топ-сет: ${session?.topSet || '—'}`);
-  card.appendChild(day);
+  card.appendChild(header);
 
   if (intensitySummary) {
     card.appendChild(intensitySummary);
