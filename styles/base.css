@@ -93,6 +93,11 @@ ul {
   gap: var(--space-md);
 }
 
+.panel__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .panel__body p {
   max-width: 72ch;
 }
@@ -148,6 +153,24 @@ label {
   background: #1c8bff;
   box-shadow: 0 6px 18px rgba(28, 139, 255, 0.35);
   transform: translateY(-1px);
+}
+
+.ui-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.ui-button--secondary {
+  background: #f2f2f7;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.ui-button--secondary:hover {
+  background: #e5e5ea;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .program-container {

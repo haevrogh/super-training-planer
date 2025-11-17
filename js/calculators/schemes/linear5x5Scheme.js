@@ -11,12 +11,12 @@ const DEFAULT_WEEKS = 6;
 const SESSION_DAYS = ['Пн', 'Чт'];
 
 const WEEK_CONFIGS = [
-  { label: 'Volume 1', percent: 0.72, sets: 5, reps: 5, rpe: '7.5-8' },
-  { label: 'Volume 2', percent: 0.78, sets: 5, reps: 5, rpe: '7.5-8' },
-  { label: 'Strength 1', percent: 0.82, sets: 4, reps: 4, rpe: '8' },
-  { label: 'Strength 2', percent: 0.86, sets: 4, reps: 4, rpe: '8-8.5' },
-  { label: 'Power', percent: 0.9, sets: 3, reps: 3, rpe: '8.5-9' },
-  { label: 'Test Week', testWeek: true },
+  { label: 'Объём 1', percent: 0.72, sets: 5, reps: 5, rpe: '7.5-8' },
+  { label: 'Объём 2', percent: 0.78, sets: 5, reps: 5, rpe: '7.5-8' },
+  { label: 'Сила 1', percent: 0.82, sets: 4, reps: 4, rpe: '8' },
+  { label: 'Сила 2', percent: 0.86, sets: 4, reps: 4, rpe: '8-8.5' },
+  { label: 'Мощность', percent: 0.9, sets: 3, reps: 3, rpe: '8.5-9' },
+  { label: 'Тестовая неделя', testWeek: true },
 ];
 
 function buildLinearSession(topLine, backoffLines) {
@@ -27,7 +27,7 @@ function buildLinearSession(topLine, backoffLines) {
 
 function buildLinearWeek(weekNumber, config, oneRm) {
   if (config.testWeek) {
-    const sessions = buildLinearSession('Test week (work up to heavy triples/singles)', []);
+    const sessions = buildLinearSession('Тестовая неделя (до тяжёлых троек/синглов)', []);
 
     return createProgramWeek({
       weekNumber,
@@ -65,7 +65,7 @@ export function generateLinear5x5Program(userInput, oneRm) {
 
   return createProgram({
     id: 'linear-5x5',
-    name: 'Linear 5×5 → 3×3',
+    name: 'Линейная 5×5 → 3×3',
     userInput: userInput || null,
     oneRm: safeOneRm,
     weeks,
