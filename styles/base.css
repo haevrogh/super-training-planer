@@ -17,6 +17,10 @@
   box-sizing: border-box;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 body {
   margin: 0;
   min-height: 100vh;
@@ -285,6 +289,11 @@ label {
   border-radius: var(--radius-sm);
   background: #fdfdfd;
   padding: 10px;
+  display: none;
+}
+
+.session-intensity__details.session-intensity__details--visible {
+  display: block;
 }
 
 .session-metric-grid {
@@ -388,9 +397,13 @@ label {
   border-radius: var(--radius-lg);
   background: #fdfdfd;
   padding: var(--space-md);
-  display: flex;
+  display: none;
   flex-direction: column;
   gap: var(--space-md);
+}
+
+.chart-body.chart-body--visible {
+  display: flex;
 }
 
 .chart-grid {
