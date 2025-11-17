@@ -46,6 +46,8 @@ export function readFormInput() {
   const reps = Number(formData.get('reps'));
   const movementType = formData.get('movementType') || 'compound';
   const goal = formData.get('goal') || '';
+  const experienceLevel = formData.get('experienceLevel') || 'intermediate';
+  const sessionsPerWeek = Number(formData.get('sessionsPerWeek')) || 2;
   const scheme = formData.get('scheme') || '';
   const weeks = Number(formData.get('weeks')) || 0;
 
@@ -57,11 +59,17 @@ export function readFormInput() {
     throw new Error('Повторения должны быть больше нуля.');
   }
 
+  if (!Number.isFinite(sessionsPerWeek) || sessionsPerWeek < 2 || sessionsPerWeek > 4) {
+    throw new Error('Количество тренировок должно быть от 2 до 4.');
+  }
+
   return {
     weight,
     reps,
     movementType,
     goal,
+    experienceLevel,
+    sessionsPerWeek,
     scheme,
     weeks,
   };
