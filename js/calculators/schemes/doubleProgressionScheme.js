@@ -12,6 +12,8 @@ import {
   resolveSessionDays,
   resolveVolumeMultiplier,
 } from '../helpers/trainingAdjustments.js';
+import { buildIntensitySummary } from '../helpers/intensitySummary.js';
+import { buildAccessoryProgression } from '../helpers/accessoryProgression.js';
 
 const DEFAULT_WEEKS = 6;
 const BASE_PERCENT = 0.7;
@@ -25,13 +27,31 @@ function buildDoubleProgressionWeek(
   sessionDays,
   backoffSetsCount,
   reachedCap,
+  oneRm,
+  userInput,
 ) {
   const setLine = `${workingWeight}×${targetReps}`;
   const baseBackoffSets = Array.from({ length: backoffSetsCount }, () => setLine);
   const backoffWithNote = reachedCap ? [...baseBackoffSets, NOTE] : baseBackoffSets;
+  const intensitySummary = buildIntensitySummary({
+    topWeight: workingWeight,
+    topReps: targetReps,
+    backoffWeight: workingWeight,
+    backoffReps: targetReps,
+    backoffSets: backoffSetsCount,
+    intensityPercent: null,
+    oneRm,
+    rpe: '7-8',
+  });
 
-  const sessions = sessionDays.map((dayLabel) =>
-    createProgramSession({ dayLabel, topSet: setLine, backoffSets: [...backoffWithNote] }),
+  const sessions = sessionDays.map((dayLabel, sessionIndex) =>
+    createProgramSession({
+      dayLabel,
+      topSet: setLine,
+      backoffSets: [...backoffWithNote],
+      intensitySummary,
+      accessories: buildAccessoryProgression(weekNumber, sessionIndex, userInput),
+    }),
   );
 
   return createProgramWeek({
@@ -65,6 +85,8 @@ export function generateDoubleProgressionProgram(userInput, oneRm) {
         sessionDays,
         backoffSetsCount,
         reachedCap,
+        safeOneRm,
+        userInput,
       ),
     );
   }
