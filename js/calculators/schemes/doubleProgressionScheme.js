@@ -5,7 +5,7 @@ import {
   createProgramWeek,
   createProgramSession,
 } from '../../models.js';
-import { roundToDumbbell } from '../helpers/dumbbellRounding.js';
+import { roundToDumbbell, DUMBBELL_STEPS } from '../helpers/dumbbellRounding.js';
 import {
   resolveDoubleProgressionRange,
   resolveIntensityPercent,
@@ -19,6 +19,21 @@ const DEFAULT_WEEKS = 6;
 const BASE_PERCENT = 0.7;
 const BASE_TOTAL_SETS = 3;
 const NOTE = 'Подумай об увеличении веса на следующей неделе';
+
+function getNextDumbbellWeight(currentWeight) {
+  const roundedWeight = roundToDumbbell(currentWeight);
+  const currentIndex = DUMBBELL_STEPS.indexOf(roundedWeight);
+
+  if (currentIndex === -1) {
+    return roundedWeight;
+  }
+
+  if (currentIndex >= DUMBBELL_STEPS.length - 1) {
+    return DUMBBELL_STEPS[DUMBBELL_STEPS.length - 1];
+  }
+
+  return DUMBBELL_STEPS[currentIndex + 1];
+}
 
 function buildDoubleProgressionWeek(
   weekNumber,
@@ -70,23 +85,26 @@ export function generateDoubleProgressionProgram(userInput, oneRm) {
   const requestedWeeks = Number(userInput?.weeks) || DEFAULT_WEEKS;
   const totalWeeks = Math.max(1, requestedWeeks);
   const intensityPercent = resolveIntensityPercent(BASE_PERCENT, userInput);
-  const workingWeight = safeOneRm > 0 ? roundToDumbbell(safeOneRm * intensityPercent) : 0;
+  const baseWorkingWeight = safeOneRm > 0 ? roundToDumbbell(safeOneRm * intensityPercent) : 0;
   const sessionDays = resolveSessionDays(userInput);
   const volumeMultiplier = resolveVolumeMultiplier(userInput);
   const totalSets = Math.max(2, Math.round(BASE_TOTAL_SETS * volumeMultiplier));
   const backoffSetsCount = Math.max(1, totalSets - 1);
   const repRange = resolveDoubleProgressionRange(userInput);
 
+  let currentWeight = baseWorkingWeight;
+  let currentReps = repRange.start;
+
   const weeks = [];
 
   for (let i = 0; i < totalWeeks; i += 1) {
-    const targetReps = Math.min(repRange.start + i, repRange.end);
-    const reachedCap = targetReps >= repRange.end;
+    const reachedCap = currentReps >= repRange.end;
+
     weeks.push(
       buildDoubleProgressionWeek(
         i + 1,
-        targetReps,
-        workingWeight,
+        currentReps,
+        currentWeight,
         sessionDays,
         backoffSetsCount,
         reachedCap,
@@ -95,6 +113,13 @@ export function generateDoubleProgressionProgram(userInput, oneRm) {
         intensityPercent,
       ),
     );
+
+    if (reachedCap) {
+      currentWeight = getNextDumbbellWeight(currentWeight);
+      currentReps = repRange.start;
+    } else {
+      currentReps = Math.min(currentReps + 1, repRange.end);
+    }
   }
 
   return createProgram({
