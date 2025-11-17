@@ -9,6 +9,7 @@ export function createUserInput(input = {}) {
     movementType: input.movementType || 'compound',
     goal: input.goal || '',
     experienceLevel: input.experienceLevel || 'intermediate',
+    talentLevel: input.talentLevel || 'balanced',
     sessionsPerWeek:
       Number.isFinite(safeSessions) && safeSessions > 0 ? safeSessions : 2,
     scheme: input.scheme || '',

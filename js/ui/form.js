@@ -47,6 +47,7 @@ export function readFormInput() {
   const movementType = formData.get('movementType') || 'compound';
   const goal = formData.get('goal') || '';
   const experienceLevel = formData.get('experienceLevel') || 'intermediate';
+  const talentLevel = formData.get('talentLevel') || 'balanced';
   const sessionsPerWeek = Number(formData.get('sessionsPerWeek')) || 2;
   const scheme = formData.get('scheme') || '';
   const weeks = Number(formData.get('weeks')) || 0;
@@ -69,6 +70,7 @@ export function readFormInput() {
     movementType,
     goal,
     experienceLevel,
+    talentLevel,
     sessionsPerWeek,
     scheme,
     weeks,
