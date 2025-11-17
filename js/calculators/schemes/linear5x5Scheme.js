@@ -10,9 +10,9 @@ import {
   resolveIntensityPercent,
   resolveSessionDays,
   resolveVolumeMultiplier,
+  resolveRestInterval,
 } from '../helpers/trainingAdjustments.js';
 import { buildIntensitySummary } from '../helpers/intensitySummary.js';
-import { buildAccessoryProgression } from '../helpers/accessoryProgression.js';
 
 const DEFAULT_WEEKS = 6;
 
@@ -25,34 +25,27 @@ const WEEK_CONFIGS = [
   { label: 'Тестовая неделя', testWeek: true },
 ];
 
-function buildLinearSession(
-  topLine,
-  backoffLines,
-  sessionDays,
-  weekNumber,
-  userInput,
-  intensitySummary,
-) {
-  return sessionDays.map((dayLabel, sessionIndex) =>
+function buildLinearSession(topLine, backoffLines, sessionDays, intensitySummary, restInterval) {
+  return sessionDays.map((dayLabel) =>
     createProgramSession({
       dayLabel,
       topSet: topLine,
       backoffSets: [...backoffLines],
       intensitySummary,
-      accessories: buildAccessoryProgression(weekNumber, sessionIndex, userInput),
+      restInterval,
     }),
   );
 }
 
 function buildLinearWeek(weekNumber, config, oneRm, userInput, sessionDays, volumeMultiplier) {
   if (config.testWeek) {
+    const restInterval = resolveRestInterval(userInput);
     const sessions = buildLinearSession(
       'Тестовая неделя (до тяжёлых троек/синглов)',
       [],
       sessionDays,
-      weekNumber,
-      userInput,
       null,
+      restInterval,
     );
 
     return createProgramWeek({
@@ -78,13 +71,16 @@ function buildLinearWeek(weekNumber, config, oneRm, userInput, sessionDays, volu
     oneRm,
     rpe: config.rpe,
   });
+  const restInterval = resolveRestInterval(userInput, {
+    reps: config.reps,
+    intensityPercent,
+  });
   const sessions = buildLinearSession(
     topSetLine,
     backoffSets,
     sessionDays,
-    weekNumber,
-    userInput,
     intensitySummary,
+    restInterval,
   );
 
   return createProgramWeek({

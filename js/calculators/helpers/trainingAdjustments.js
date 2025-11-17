@@ -21,6 +21,23 @@ const SESSION_DAY_TEMPLATES = {
   4: ['Пн', 'Вт', 'Чт', 'Пт'],
 };
 
+const REST_INTERVAL_RULES = {
+  strength: {
+    compound: { base: '3–4 мин', heavy: '4–6 мин' },
+    isolation: { base: '2–3 мин', heavy: '3–4 мин' },
+  },
+  hypertrophy: {
+    compound: { base: '2–3 мин', heavy: '3–4 мин' },
+    isolation: { base: '60–90 сек', heavy: '90–120 сек' },
+  },
+  endurance: {
+    compound: { base: '60–90 сек', heavy: '90–120 сек' },
+    isolation: { base: '45–75 сек', heavy: '60–90 сек' },
+  },
+};
+
+const DEFAULT_REST_INTERVAL = '2–3 мин';
+
 const DOUBLE_PROGRESSION_RANGES = {
   strength: { start: 6, end: 10 },
   hypertrophy: { start: 8, end: 12 },
@@ -35,6 +52,22 @@ const EXPERIENCE_REP_SHIFT = {
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
+}
+
+function parseRepsValue(repsInput) {
+  if (repsInput === undefined || repsInput === null) {
+    return null;
+  }
+
+  const match = String(repsInput).match(/(\d+(?:\.\d+)?)/);
+
+  if (!match || match.length === 0) {
+    const numeric = Number(repsInput);
+    return Number.isFinite(numeric) ? numeric : null;
+  }
+
+  const numericValue = Number(match[1]);
+  return Number.isFinite(numericValue) ? numericValue : null;
 }
 
 export function resolveIntensityPercent(basePercent, userInput = {}) {
@@ -65,4 +98,25 @@ export function resolveDoubleProgressionRange(userInput = {}) {
   const start = clamp(baseRange.start + shift, 5, 20);
   const end = clamp(Math.max(baseRange.end + shift, start + 1), start + 1, 25);
   return { start, end };
+}
+
+export function resolveRestInterval(userInput = {}, context = {}) {
+  const goalKey = REST_INTERVAL_RULES[userInput.goal] ? userInput.goal : 'strength';
+  const movementKey = userInput.movementType === 'isolation' ? 'isolation' : 'compound';
+  const rules = REST_INTERVAL_RULES[goalKey][movementKey] || {};
+  const intensityPercent = Number(context.intensityPercent);
+  const repsValue = parseRepsValue(context.reps);
+  const isHeavyIntensity = Number.isFinite(intensityPercent) && intensityPercent >= 0.85;
+  const isLowRep = Number.isFinite(repsValue) && repsValue <= 4;
+  const useHeavyRecommendation = isHeavyIntensity || isLowRep;
+
+  if (useHeavyRecommendation && rules.heavy) {
+    return rules.heavy;
+  }
+
+  if (rules.base) {
+    return rules.base;
+  }
+
+  return DEFAULT_REST_INTERVAL;
 }

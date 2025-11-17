@@ -38,13 +38,13 @@ export function createProgramSession({
   topSet,
   backoffSets,
   intensitySummary,
-  accessories,
+  restInterval,
 } = {}) {
   return {
     dayLabel: dayLabel || '',
     topSet: topSet || '',
     backoffSets: Array.isArray(backoffSets) ? backoffSets : [],
     intensitySummary: intensitySummary || null,
-    accessories: Array.isArray(accessories) ? accessories : [],
+    restInterval: restInterval || '',
   };
 }

@@ -13,9 +13,9 @@ import {
   resolveIntensityPercent,
   resolveSessionDays,
   resolveVolumeMultiplier,
+  resolveRestInterval,
 } from '../helpers/trainingAdjustments.js';
 import { buildIntensitySummary } from '../helpers/intensitySummary.js';
-import { buildAccessoryProgression } from '../helpers/accessoryProgression.js';
 
 const DEFAULT_WEEKS = 6;
 const WEEK_CONFIGS = [
@@ -60,27 +60,27 @@ const WEEK_CONFIGS = [
   },
 ];
 
-function buildSession(topSetLine, backoffSetLines, sessionDays, weekNumber, userInput, summary) {
-  return sessionDays.map((dayLabel, sessionIndex) =>
+function buildSession(topSetLine, backoffSetLines, sessionDays, summary, restInterval) {
+  return sessionDays.map((dayLabel) =>
     createProgramSession({
       dayLabel,
       topSet: topSetLine,
       backoffSets: [...backoffSetLines],
       intensitySummary: summary,
-      accessories: buildAccessoryProgression(weekNumber, sessionIndex, userInput),
+      restInterval,
     }),
   );
 }
 
 function buildWeekPayload(weekNumber, config, oneRm, userInput, sessionDays, volumeMultiplier) {
   if (config.testWeek) {
+    const restInterval = resolveRestInterval(userInput);
     const sessions = buildSession(
       'Тестовая неделя (1–2 тяжёлых сингла)',
       [],
       sessionDays,
-      weekNumber,
-      userInput,
       null,
+      restInterval,
     );
 
     return createProgramWeek({
@@ -96,6 +96,10 @@ function buildWeekPayload(weekNumber, config, oneRm, userInput, sessionDays, vol
   const backoffLine = `${backoffWeight}×${config.backoff.reps} @ RPE ${config.backoff.rpe}`;
   const totalBackoffSets = Math.max(1, Math.round(config.backoff.sets * volumeMultiplier));
   const backoffSets = Array.from({ length: totalBackoffSets }, () => backoffLine);
+  const restInterval = resolveRestInterval(userInput, {
+    reps: config.reps,
+    intensityPercent,
+  });
   const intensitySummary = buildIntensitySummary({
     topWeight: topSetWeight,
     topReps: config.reps,
@@ -110,9 +114,8 @@ function buildWeekPayload(weekNumber, config, oneRm, userInput, sessionDays, vol
     topSetLine,
     backoffSets,
     sessionDays,
-    weekNumber,
-    userInput,
     intensitySummary,
+    restInterval,
   );
 
   return createProgramWeek({
