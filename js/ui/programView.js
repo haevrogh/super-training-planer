@@ -168,6 +168,7 @@ function createChartsSection(program) {
   const body = document.createElement('div');
   body.className = 'chart-body';
   body.hidden = true;
+  body.classList.remove('chart-body--visible');
   const bodyId = `program-charts-${chartInstanceCounter}`;
   body.id = bodyId;
   toggle.setAttribute('aria-controls', bodyId);
@@ -185,10 +186,11 @@ function createChartsSection(program) {
   body.append(grid, hint);
 
   toggle.addEventListener('click', () => {
-    const wasHidden = body.hidden;
-    body.hidden = !body.hidden;
-    toggle.setAttribute('aria-expanded', String(wasHidden));
-    toggle.textContent = wasHidden ? 'Скрыть графики' : 'Показать графики прогресса';
+    const willShow = body.hidden;
+    body.hidden = !willShow;
+    body.classList.toggle('chart-body--visible', willShow);
+    toggle.setAttribute('aria-expanded', String(willShow));
+    toggle.textContent = willShow ? 'Скрыть графики' : 'Показать графики прогресса';
   });
 
   section.append(toggle, body);
@@ -233,6 +235,7 @@ function createIntensitySummary(summary) {
   const details = document.createElement('div');
   details.className = 'session-intensity__details';
   details.hidden = true;
+  details.classList.remove('session-intensity__details--visible');
   intensitySummaryCounter += 1;
   const detailsId = `session-intensity-${intensitySummaryCounter}`;
   details.id = detailsId;
@@ -285,6 +288,7 @@ function createIntensitySummary(summary) {
   toggle.addEventListener('click', () => {
     const willShow = details.hidden;
     details.hidden = !willShow;
+    details.classList.toggle('session-intensity__details--visible', willShow);
     toggle.setAttribute('aria-expanded', String(willShow));
     toggle.textContent = willShow ? 'Скрыть метрики' : 'Показать метрики';
   });

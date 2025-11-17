@@ -16,9 +16,23 @@ import {
 import { buildIntensitySummary } from '../helpers/intensitySummary.js';
 
 const DEFAULT_WEEKS = 6;
-const BASE_PERCENT = 0.7;
+const FALLBACK_INTENSITY_PERCENT = 0.7;
 const BASE_TOTAL_SETS = 3;
 const NOTE = 'Подумай об увеличении веса на следующей неделе';
+const REP_PERCENT_COEFFICIENT = 30;
+const REP_PERCENT_MIN = 3;
+const REP_PERCENT_MAX = 20;
+
+function resolveRepBasedPercent(repRangeStart) {
+  const safeStart = Number(repRangeStart);
+
+  if (!Number.isFinite(safeStart) || safeStart <= 0) {
+    return FALLBACK_INTENSITY_PERCENT;
+  }
+
+  const clamped = Math.min(Math.max(safeStart, REP_PERCENT_MIN), REP_PERCENT_MAX);
+  return 1 / (1 + clamped / REP_PERCENT_COEFFICIENT);
+}
 
 function getNextDumbbellWeight(currentWeight) {
   const roundedWeight = roundToDumbbell(currentWeight);
@@ -84,13 +98,21 @@ export function generateDoubleProgressionProgram(userInput, oneRm) {
   const safeOneRm = Number(oneRm) || 0;
   const requestedWeeks = Number(userInput?.weeks) || DEFAULT_WEEKS;
   const totalWeeks = Math.max(1, requestedWeeks);
-  const intensityPercent = resolveIntensityPercent(BASE_PERCENT, userInput);
-  const baseWorkingWeight = safeOneRm > 0 ? roundToDumbbell(safeOneRm * intensityPercent) : 0;
+  const repRange = resolveDoubleProgressionRange(userInput);
+  const repBasedPercent = resolveRepBasedPercent(repRange.start);
+  const intensityPercent = resolveIntensityPercent(repBasedPercent, userInput);
+  const fallbackWeight = Number(userInput?.weight);
+  let baseWorkingWeight = 0;
+
+  if (safeOneRm > 0) {
+    baseWorkingWeight = roundToDumbbell(safeOneRm * intensityPercent);
+  } else if (Number.isFinite(fallbackWeight) && fallbackWeight > 0) {
+    baseWorkingWeight = roundToDumbbell(fallbackWeight);
+  }
   const sessionDays = resolveSessionDays(userInput);
   const volumeMultiplier = resolveVolumeMultiplier(userInput);
   const totalSets = Math.max(2, Math.round(BASE_TOTAL_SETS * volumeMultiplier));
   const backoffSetsCount = Math.max(1, totalSets - 1);
-  const repRange = resolveDoubleProgressionRange(userInput);
 
   let currentWeight = baseWorkingWeight;
   let currentReps = repRange.start;
