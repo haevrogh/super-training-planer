@@ -232,12 +232,6 @@ label {
   margin-bottom: 4px;
 }
 
-.session-topset {
-  color: #0071e3;
-  font-weight: 500;
-  margin-bottom: 6px;
-}
-
 .session-intensity {
   display: flex;
   flex-wrap: wrap;
@@ -268,25 +262,32 @@ label {
   color: var(--text);
 }
 
-.session-backoffs {
+.session-worksets {
   margin-top: 4px;
 }
 
-.session-backoffs__title {
+.session-worksets__title {
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--subtext);
   margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
-.session-backoffs__list {
+.session-worksets__list {
   margin: 0;
   padding-left: var(--space-md);
 }
 
-.session-backoffs__list li {
-  color: var(--subtext);
+.session-worksets__list li {
+  color: var(--text);
   margin-left: 0;
+}
+
+.session-worksets__top {
+  color: #0071e3;
+  font-weight: 600;
 }
 
 .session-accessories {

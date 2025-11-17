@@ -27,11 +27,20 @@ function createIntensitySummary(summary) {
 
   const metrics = [
     { label: 'Тоннаж', value: formatMetricValue(summary.tonnage, 'кг') },
-    { label: 'Интенсивность', value: formatMetricValue(summary.avgIntensity, '%') },
     {
-      label: 'F+B',
-      value: formatMetricValue(summary.fPlusB),
-      hint: 'Fatigue + Benefit — условный индекс нагрузки',
+      label: 'MTI',
+      value: formatMetricValue(summary.mti),
+      hint: 'Mechanical Tension Index — связь с ростом силы и мышц',
+    },
+    {
+      label: 'F×V',
+      value: formatMetricValue(summary.forceVelocity),
+      hint: 'Force × Velocity — скоростно-силовой профиль (VBT)',
+    },
+    {
+      label: 'NLV',
+      value: formatMetricValue(summary.normalizedLoadVolume, 'кг'),
+      hint: 'Normalized Load Volume — объём с учётом RPE',
     },
   ];
 
@@ -58,24 +67,43 @@ function createIntensitySummary(summary) {
   return wrapper;
 }
 
-function createBackoffSection(backoffSets) {
+function createWorkSetsSection({ topSet, backoffSets }) {
   const container = document.createElement('div');
-  container.className = 'session-backoffs';
+  container.className = 'session-worksets';
 
   const title = document.createElement('div');
-  title.className = 'session-backoffs__title';
-  title.textContent = 'Доп. подходы';
+  title.className = 'session-worksets__title';
+  title.textContent = 'Рабочие подходы';
   container.appendChild(title);
 
   const list = document.createElement('ul');
-  list.className = 'session-backoffs__list';
-  list.setAttribute('aria-label', 'Дополнительные подходы');
+  list.className = 'session-worksets__list';
+  list.setAttribute('aria-label', 'Рабочие подходы тренировки');
 
-  const entries = Array.isArray(backoffSets) && backoffSets.length > 0 ? backoffSets : ['—'];
+  const entries = [];
 
-  entries.forEach((line) => {
+  if (topSet) {
+    entries.push({ text: topSet, className: 'session-worksets__top' });
+  }
+
+  if (Array.isArray(backoffSets) && backoffSets.length > 0) {
+    backoffSets.forEach((line) => {
+      entries.push({ text: line, className: null });
+    });
+  }
+
+  if (entries.length === 0) {
+    entries.push({ text: '—', className: null });
+  }
+
+  entries.forEach((entry) => {
     const item = document.createElement('li');
-    item.textContent = line;
+    item.textContent = entry.text;
+
+    if (entry.className) {
+      item.classList.add(entry.className);
+    }
+
     list.appendChild(item);
   });
 
@@ -129,23 +157,17 @@ function createSessionCard(session) {
   day.className = 'session-day';
   day.textContent = session?.dayLabel || '—';
 
-  const topSet = document.createElement('div');
-  topSet.className = 'session-topset';
-  topSet.textContent = session?.topSet || '—';
-
   const intensitySummary = createIntensitySummary(session?.intensitySummary);
-  const backoffSection = createBackoffSection(session?.backoffSets);
+  const workSetsSection = createWorkSetsSection(session || {});
   const accessorySection = createAccessoriesSection(session?.accessories);
 
   const sessionLabel = session?.dayLabel ? `Тренировка ${session.dayLabel}` : 'Тренировка';
   card.setAttribute('aria-label', `${sessionLabel}. Топ-сет: ${session?.topSet || '—'}`);
-  card.append(day, topSet);
+  card.append(day, workSetsSection);
 
   if (intensitySummary) {
     card.appendChild(intensitySummary);
   }
-
-  card.appendChild(backoffSection);
 
   if (accessorySection) {
     card.appendChild(accessorySection);
