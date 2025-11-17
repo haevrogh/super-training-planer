@@ -47,6 +47,67 @@ function safePositive(value) {
   return Number.isFinite(numeric) && numeric > 0 ? numeric : 0;
 }
 
+function normalizePercentValue(percentValue) {
+  const numeric = Number(percentValue);
+
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return 0;
+  }
+
+  return numeric <= 1 ? numeric * 100 : numeric;
+}
+
+function computePercent1Rm(weight, oneRm, fallbackPercent) {
+  const safeWeight = safePositive(weight);
+
+  if (Number.isFinite(oneRm) && oneRm > 0 && safeWeight > 0) {
+    return (safeWeight / oneRm) * 100;
+  }
+
+  return normalizePercentValue(fallbackPercent);
+}
+
+function approximateRpe(percent1Rm) {
+  if (!percent1Rm) {
+    return 0;
+  }
+
+  return (percent1Rm / 100) * 10;
+}
+
+function resolveRpeValue(rpeInput, percent1Rm) {
+  if (rpeInput !== undefined && rpeInput !== null && String(rpeInput).trim() !== '') {
+    const parsed = parseRpeValue(rpeInput);
+
+    if (Number.isFinite(parsed) && parsed > 0) {
+      return parsed;
+    }
+  }
+
+  return approximateRpe(percent1Rm);
+}
+
+function calculateSetMti({ weight, reps, percent1Rm, rpeInput }) {
+  const safeWeight = safePositive(weight);
+  const safeReps = safePositive(reps);
+  const safePercent = Math.max(0, Number(percent1Rm) || 0);
+
+  if (safeWeight === 0 || safeReps === 0 || safePercent === 0) {
+    return 0;
+  }
+
+  const rpeValue = resolveRpeValue(rpeInput, safePercent);
+  const normalizedPercent = safePercent / 100;
+  const normalizedRpe = Math.max(0, rpeValue / 10);
+
+  return (
+    safeWeight *
+    safeReps *
+    normalizedPercent ** 1.6 *
+    normalizedRpe ** 2
+  );
+}
+
 export function buildIntensitySummary({
   topWeight,
   topReps,
@@ -93,7 +154,27 @@ export function buildIntensitySummary({
   const totalReps = safeTopReps + safeBackoffReps * safeBackoffSets;
 
   const rpeValue = parseRpeValue(rpe);
-  const mechanicalTensionIndex = Math.round(relativeLoad * totalReps * 10);
+  const topPercent1Rm = computePercent1Rm(safeTopWeight, oneRm, intensityPercent);
+  const backoffPercent1Rm = computePercent1Rm(
+    safeBackoffWeight,
+    oneRm,
+    topPercent1Rm,
+  );
+  const topSetMti = calculateSetMti({
+    weight: safeTopWeight,
+    reps: safeTopReps,
+    percent1Rm: topPercent1Rm,
+    rpeInput: rpe,
+  });
+  const backoffSetMti = calculateSetMti({
+    weight: safeBackoffWeight,
+    reps: safeBackoffReps,
+    percent1Rm: backoffPercent1Rm,
+    rpeInput: null,
+  });
+  const mechanicalTensionIndex = Math.round(
+    topSetMti + backoffSetMti * safeBackoffSets,
+  );
   const velocityFactor = Math.max(0.2, 1 - relativeLoad * 0.7);
   const forceVelocity = Math.round(safeTopWeight * velocityFactor);
   const normalizedLoadVolume = Math.round(tonnage * (rpeValue / 10));
