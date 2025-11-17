@@ -21,6 +21,10 @@ const LAST_FORM_STATE_KEY = 'lastFormState';
 const TRAINING_FORM_ID = 'training-form';
 const RESULT_CONTAINER_ID = 'result';
 const SAVE_BUTTON_ID = 'save-program';
+const COPY_BUTTON_ID = 'copy-program';
+const COPY_SUCCESS_LABEL = 'Скопировано!';
+const COPY_ERROR_LABEL = 'Ошибка копирования';
+const COPY_RESET_DELAY = 2000;
 
 const MOVEMENT_TYPE_LABELS = {
   compound: 'Базовое движение',
@@ -46,6 +50,9 @@ const FORM_STATE_FIELDS = [
 
 let pendingProgram = null;
 let saveButtonElement = null;
+let copyButtonElement = null;
+let currentProgram = null;
+let copyButtonResetTimeout = null;
 
 function getTrainingFormElement() {
   return document.getElementById(TRAINING_FORM_ID);
@@ -64,6 +71,15 @@ function getSaveButtonElement() {
   return saveButtonElement;
 }
 
+function getCopyButtonElement() {
+  if (copyButtonElement) {
+    return copyButtonElement;
+  }
+
+  copyButtonElement = document.getElementById(COPY_BUTTON_ID);
+  return copyButtonElement;
+}
+
 function updateSaveButtonState(isEnabled) {
   const button = getSaveButtonElement();
 
@@ -78,6 +94,22 @@ function updateSaveButtonState(isEnabled) {
 function setPendingProgram(program) {
   pendingProgram = program || null;
   updateSaveButtonState(Boolean(program));
+}
+
+function updateCopyButtonState(isEnabled) {
+  const button = getCopyButtonElement();
+
+  if (!button) {
+    return;
+  }
+
+  button.disabled = !isEnabled;
+  button.setAttribute('aria-disabled', String(!isEnabled));
+}
+
+function setCurrentProgram(program) {
+  currentProgram = program || null;
+  updateCopyButtonState(Boolean(currentProgram));
 }
 
 function saveLastFormState(formInput) {
@@ -145,6 +177,7 @@ function setupFormChangeHandler() {
   const handleFormChange = () => {
     clearProgram();
     setPendingProgram(null);
+    setCurrentProgram(null);
   };
 
   form.addEventListener('input', handleFormChange);
@@ -272,6 +305,7 @@ function handleProgramSelect(id) {
   clearProgram();
   renderProgram(program);
   setPendingProgram(null);
+  setCurrentProgram(program);
   scrollToResult();
 }
 
@@ -296,6 +330,7 @@ function handleGenerate(formInput) {
   clearProgram();
   renderProgram(program);
   setPendingProgram(program);
+  setCurrentProgram(program);
   scrollToResult();
 }
 
@@ -313,6 +348,7 @@ function handleSaveProgram() {
   renderProgram(persistedProgram);
   scrollToResult();
   setPendingProgram(null);
+  setCurrentProgram(persistedProgram);
   refreshProgramList();
 }
 
@@ -331,12 +367,203 @@ function setupSaveButton() {
   updateSaveButtonState(false);
 }
 
+function formatIntensityForClipboard(summary) {
+  if (!summary) {
+    return 'Интенсивность: —';
+  }
+
+  const parts = [];
+
+  const tonnage = Number(summary.tonnage);
+  const mti = Number(summary.mti);
+  const nlv = Number(summary.normalizedLoadVolume);
+
+  if (Number.isFinite(tonnage) && tonnage > 0) {
+    parts.push(`Тоннаж ${Math.round(tonnage)} кг`);
+  }
+
+  if (Number.isFinite(mti) && mti > 0) {
+    parts.push(`MTI ${Math.round(mti)}`);
+  }
+
+  if (Number.isFinite(nlv) && nlv > 0) {
+    parts.push(`NLV ${Math.round(nlv)} кг`);
+  }
+
+  if (parts.length === 0) {
+    return 'Интенсивность: —';
+  }
+
+  return `Интенсивность: ${parts.join(' · ')}`;
+}
+
+function buildProgramClipboardText(program) {
+  if (!program) {
+    return '';
+  }
+
+  const lines = [];
+  const programTitle = program.name || 'Без названия';
+  lines.push(`Программа: ${programTitle}`);
+  lines.push('');
+
+  const weeks = Array.isArray(program.weeks) ? program.weeks : [];
+
+  weeks.forEach((week, index) => {
+    const weekNumber = Number(week?.weekNumber) || index + 1;
+    lines.push(`Неделя ${weekNumber}`);
+
+    const sessions = Array.isArray(week?.sessions) ? week.sessions : [];
+
+    if (sessions.length === 0) {
+      lines.push('\t— тренировок нет');
+      lines.push('');
+      return;
+    }
+
+    sessions.forEach((session) => {
+      const dayLabel = session?.dayLabel || 'Тренировка';
+      const sets = [];
+
+      if (session?.topSet) {
+        sets.push(session.topSet);
+      }
+
+      if (Array.isArray(session?.backoffSets)) {
+        session.backoffSets.forEach((backoff) => {
+          if (backoff === null || backoff === undefined) {
+            return;
+          }
+
+          const normalized = String(backoff).trim();
+
+          if (normalized.length > 0) {
+            sets.push(normalized);
+          }
+        });
+      }
+
+      const workSets = sets.length > 0 ? sets.join(' | ') : '—';
+      const restLine = session?.restInterval ? `Отдых ${session.restInterval}` : '';
+      const intensityLine = formatIntensityForClipboard(session?.intensitySummary);
+      const row = [dayLabel, workSets, intensityLine, restLine]
+        .filter((part) => part && part.trim().length > 0)
+        .join('\t');
+      lines.push(row);
+    });
+
+    lines.push('');
+  });
+
+  return lines.join('\n').trim();
+}
+
+async function copyProgramToClipboard(program) {
+  if (!program) {
+    return false;
+  }
+
+  const text = buildProgramClipboardText(program);
+
+  if (!text) {
+    return false;
+  }
+
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', 'true');
+    textarea.style.position = 'absolute';
+    textarea.style.left = '-9999px';
+    document.body.appendChild(textarea);
+    textarea.select();
+    const success = document.execCommand('copy');
+    document.body.removeChild(textarea);
+    return success;
+  } catch (error) {
+    console.warn('Не удалось скопировать программу', error);
+    return false;
+  }
+}
+
+function resetCopyButtonLabel() {
+  const button = getCopyButtonElement();
+
+  if (!button) {
+    return;
+  }
+
+  const originalLabel = button.dataset.originalLabel;
+
+  if (originalLabel) {
+    button.textContent = originalLabel;
+  }
+}
+
+function temporarilySetCopyLabel(text) {
+  const button = getCopyButtonElement();
+
+  if (!button) {
+    return;
+  }
+
+  if (!button.dataset.originalLabel) {
+    button.dataset.originalLabel = button.textContent;
+  }
+
+  button.textContent = text;
+
+  if (copyButtonResetTimeout) {
+    clearTimeout(copyButtonResetTimeout);
+  }
+
+  copyButtonResetTimeout = setTimeout(() => {
+    resetCopyButtonLabel();
+  }, COPY_RESET_DELAY);
+}
+
+async function handleCopyProgram() {
+  if (!currentProgram) {
+    return;
+  }
+
+  const wasCopied = await copyProgramToClipboard(currentProgram);
+
+  if (wasCopied) {
+    temporarilySetCopyLabel(COPY_SUCCESS_LABEL);
+    return;
+  }
+
+  temporarilySetCopyLabel(COPY_ERROR_LABEL);
+}
+
+function setupCopyButton() {
+  const button = getCopyButtonElement();
+
+  if (!button) {
+    return;
+  }
+
+  button.addEventListener('click', async (event) => {
+    event.preventDefault();
+    await handleCopyProgram();
+  });
+
+  updateCopyButtonState(false);
+}
+
 function init() {
   initForm();
   applyLastFormState();
   setupFormChangeHandler();
   onGenerateProgram(handleGenerate);
   setupSaveButton();
+  setupCopyButton();
   refreshProgramList();
 }
 
