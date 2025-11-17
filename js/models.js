@@ -1,13 +1,18 @@
 // Data model factory functions
 
-export function createUserInput(weight, reps, movementType, goal, scheme, weeks) {
+export function createUserInput(input = {}) {
+  const safeSessions = Number(input.sessionsPerWeek);
+
   return {
-    weight: Number(weight),
-    reps: Number(reps),
-    movementType: movementType || 'compound',
-    goal: goal || '',
-    scheme: scheme || '',
-    weeks: Number(weeks) || 0,
+    weight: Number(input.weight),
+    reps: Number(input.reps),
+    movementType: input.movementType || 'compound',
+    goal: input.goal || '',
+    experienceLevel: input.experienceLevel || 'intermediate',
+    sessionsPerWeek:
+      Number.isFinite(safeSessions) && safeSessions > 0 ? safeSessions : 2,
+    scheme: input.scheme || '',
+    weeks: Number(input.weeks) || 0,
   };
 }
 

@@ -33,7 +33,16 @@ const GOAL_LABELS = {
   endurance: 'Выносливость',
 };
 
-const FORM_STATE_FIELDS = ['weight', 'reps', 'movementType', 'goal', 'scheme', 'weeks'];
+const FORM_STATE_FIELDS = [
+  'weight',
+  'reps',
+  'movementType',
+  'goal',
+  'experienceLevel',
+  'sessionsPerWeek',
+  'scheme',
+  'weeks',
+];
 
 let pendingProgram = null;
 let saveButtonElement = null;
@@ -276,14 +285,7 @@ function handleProgramDelete(id) {
 }
 
 function handleGenerate(formInput) {
-  const userInput = createUserInput(
-    formInput.weight,
-    formInput.reps,
-    formInput.movementType,
-    formInput.goal,
-    formInput.scheme,
-    formInput.weeks,
-  );
+  const userInput = createUserInput(formInput);
 
   saveLastFormState(formInput);
 

@@ -9,10 +9,13 @@ import {
   roundToDumbbell,
   getLowerDumbbellStep,
 } from '../helpers/dumbbellRounding.js';
+import {
+  resolveIntensityPercent,
+  resolveSessionDays,
+  resolveVolumeMultiplier,
+} from '../helpers/trainingAdjustments.js';
 
 const DEFAULT_WEEKS = 6;
-const SESSION_DAYS = ['Пн', 'Чт'];
-
 const WEEK_CONFIGS = [
   {
     label: 'Аккумуляция 1',
@@ -55,15 +58,15 @@ const WEEK_CONFIGS = [
   },
 ];
 
-function buildSession(topSetLine, backoffSetLines) {
-  return SESSION_DAYS.map((dayLabel) =>
+function buildSession(topSetLine, backoffSetLines, sessionDays) {
+  return sessionDays.map((dayLabel) =>
     createProgramSession({ dayLabel, topSet: topSetLine, backoffSets: [...backoffSetLines] }),
   );
 }
 
-function buildWeekPayload(weekNumber, config, oneRm) {
+function buildWeekPayload(weekNumber, config, oneRm, userInput, sessionDays, volumeMultiplier) {
   if (config.testWeek) {
-    const sessions = buildSession('Тестовая неделя (1–2 тяжёлых сингла)', []);
+    const sessions = buildSession('Тестовая неделя (1–2 тяжёлых сингла)', [], sessionDays);
 
     return createProgramWeek({
       weekNumber,
@@ -71,12 +74,14 @@ function buildWeekPayload(weekNumber, config, oneRm) {
     });
   }
 
-  const topSetWeight = oneRm > 0 ? roundToDumbbell(oneRm * config.percent) : 0;
+  const intensityPercent = resolveIntensityPercent(config.percent, userInput);
+  const topSetWeight = oneRm > 0 ? roundToDumbbell(oneRm * intensityPercent) : 0;
   const topSetLine = `${topSetWeight}×${config.reps} @ RPE ${config.rpe}`;
   const backoffWeight = topSetWeight > 0 ? getLowerDumbbellStep(topSetWeight) : 0;
   const backoffLine = `${backoffWeight}×${config.backoff.reps} @ RPE ${config.backoff.rpe}`;
-  const backoffSets = Array.from({ length: config.backoff.sets }, () => backoffLine);
-  const sessions = buildSession(topSetLine, backoffSets);
+  const totalBackoffSets = Math.max(1, Math.round(config.backoff.sets * volumeMultiplier));
+  const backoffSets = Array.from({ length: totalBackoffSets }, () => backoffLine);
+  const sessions = buildSession(topSetLine, backoffSets, sessionDays);
 
   return createProgramWeek({
     weekNumber,
@@ -92,12 +97,16 @@ export function generateTopSetProgram(userInput, oneRm) {
       ? requestedWeeks
       : DEFAULT_WEEKS;
   const totalWeeks = Math.min(normalizedWeeks, WEEK_CONFIGS.length);
+  const sessionDays = resolveSessionDays(userInput);
+  const volumeMultiplier = resolveVolumeMultiplier(userInput);
 
   const weeks = [];
 
   for (let i = 0; i < totalWeeks; i += 1) {
     const config = WEEK_CONFIGS[i];
-    weeks.push(buildWeekPayload(i + 1, config, safeOneRm));
+    weeks.push(
+      buildWeekPayload(i + 1, config, safeOneRm, userInput, sessionDays, volumeMultiplier),
+    );
   }
 
   return createProgram({

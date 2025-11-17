@@ -6,9 +6,13 @@ import {
   createProgramSession,
 } from '../../models.js';
 import { roundToDumbbell } from '../helpers/dumbbellRounding.js';
+import {
+  resolveIntensityPercent,
+  resolveSessionDays,
+  resolveVolumeMultiplier,
+} from '../helpers/trainingAdjustments.js';
 
 const DEFAULT_WEEKS = 6;
-const SESSION_DAYS = ['Пн', 'Чт'];
 
 const WEEK_CONFIGS = [
   { label: 'Объём 1', percent: 0.72, sets: 5, reps: 5, rpe: '7.5-8' },
@@ -19,15 +23,19 @@ const WEEK_CONFIGS = [
   { label: 'Тестовая неделя', testWeek: true },
 ];
 
-function buildLinearSession(topLine, backoffLines) {
-  return SESSION_DAYS.map((dayLabel) =>
+function buildLinearSession(topLine, backoffLines, sessionDays) {
+  return sessionDays.map((dayLabel) =>
     createProgramSession({ dayLabel, topSet: topLine, backoffSets: [...backoffLines] }),
   );
 }
 
-function buildLinearWeek(weekNumber, config, oneRm) {
+function buildLinearWeek(weekNumber, config, oneRm, userInput, sessionDays, volumeMultiplier) {
   if (config.testWeek) {
-    const sessions = buildLinearSession('Тестовая неделя (до тяжёлых троек/синглов)', []);
+    const sessions = buildLinearSession(
+      'Тестовая неделя (до тяжёлых троек/синглов)',
+      [],
+      sessionDays,
+    );
 
     return createProgramWeek({
       weekNumber,
@@ -35,12 +43,14 @@ function buildLinearWeek(weekNumber, config, oneRm) {
     });
   }
 
-  const workingWeight = oneRm > 0 ? roundToDumbbell(oneRm * config.percent) : 0;
+  const intensityPercent = resolveIntensityPercent(config.percent, userInput);
+  const workingWeight = oneRm > 0 ? roundToDumbbell(oneRm * intensityPercent) : 0;
   const topSetLine = `${workingWeight}×${config.reps} @ RPE ${config.rpe}`;
-  const remainingSets = Math.max(0, config.sets - 1);
+  const totalSets = Math.max(1, Math.round(config.sets * volumeMultiplier));
+  const remainingSets = Math.max(0, totalSets - 1);
   const backoffLine = `${workingWeight}×${config.reps} @ RPE ${config.rpe}`;
   const backoffSets = Array.from({ length: remainingSets }, () => backoffLine);
-  const sessions = buildLinearSession(topSetLine, backoffSets);
+  const sessions = buildLinearSession(topSetLine, backoffSets, sessionDays);
 
   return createProgramWeek({
     weekNumber,
@@ -56,11 +66,22 @@ export function generateLinear5x5Program(userInput, oneRm) {
       ? requestedWeeks
       : DEFAULT_WEEKS;
   const totalWeeks = Math.min(normalizedWeeks, WEEK_CONFIGS.length);
+  const sessionDays = resolveSessionDays(userInput);
+  const volumeMultiplier = resolveVolumeMultiplier(userInput);
 
   const weeks = [];
 
   for (let i = 0; i < totalWeeks; i += 1) {
-    weeks.push(buildLinearWeek(i + 1, WEEK_CONFIGS[i], safeOneRm));
+    weeks.push(
+      buildLinearWeek(
+        i + 1,
+        WEEK_CONFIGS[i],
+        safeOneRm,
+        userInput,
+        sessionDays,
+        volumeMultiplier,
+      ),
+    );
   }
 
   return createProgram({
