@@ -2,6 +2,13 @@
 
 const RESULT_CONTAINER_ID = 'result';
 const numberFormatter = new Intl.NumberFormat('ru-RU');
+const METRIC_CONFIGS = [
+  { key: 'tonnage', label: 'Суммарный тоннаж', unit: 'кг' },
+  { key: 'normalizedLoadVolume', label: 'NLV — нормализованный объём', unit: 'кг' },
+  { key: 'mti', label: 'MTI (условные ед.)', unit: 'ед.' },
+];
+
+let chartInstanceCounter = 0;
 
 function getResultContainer() {
   return document.getElementById(RESULT_CONTAINER_ID);
@@ -14,6 +21,177 @@ function formatMetricValue(value, unit) {
 
   const formatted = numberFormatter.format(value);
   return unit ? `${formatted} ${unit}` : formatted;
+}
+
+function computeLogScaleHeight(value, maxValue) {
+  const numericValue = Number(value);
+  const numericMax = Number(maxValue);
+
+  if (!Number.isFinite(numericValue) || !Number.isFinite(numericMax) || numericValue <= 0 || numericMax <= 0) {
+    return 0;
+  }
+
+  const safeValue = Math.log10(numericValue + 1);
+  const safeMax = Math.log10(numericMax + 1);
+
+  if (safeMax <= 0) {
+    return 0;
+  }
+
+  return Math.max(0, Math.min((safeValue / safeMax) * 100, 100));
+}
+
+function aggregateWeekMetrics(program) {
+  if (!program || !Array.isArray(program.weeks)) {
+    return [];
+  }
+
+  return program.weeks
+    .map((week, index) => {
+      const sessions = Array.isArray(week?.sessions) ? week.sessions : [];
+      const totals = {
+        tonnage: 0,
+        normalizedLoadVolume: 0,
+        mti: 0,
+        sessionCount: 0,
+      };
+
+      sessions.forEach((session) => {
+        const summary = session?.intensitySummary;
+
+        if (!summary) {
+          return;
+        }
+
+        totals.sessionCount += 1;
+        totals.tonnage += Number(summary.tonnage) || 0;
+        totals.normalizedLoadVolume += Number(summary.normalizedLoadVolume) || 0;
+        totals.mti += Number(summary.mti) || 0;
+      });
+
+      if (
+        totals.sessionCount === 0 &&
+        totals.tonnage === 0 &&
+        totals.normalizedLoadVolume === 0 &&
+        totals.mti === 0
+      ) {
+        return null;
+      }
+
+      return {
+        weekLabel: `Неделя ${week?.weekNumber || index + 1}`,
+        tonnage: Math.round(totals.tonnage),
+        normalizedLoadVolume: Math.round(totals.normalizedLoadVolume),
+        mti:
+          totals.sessionCount > 0 ? Math.round(totals.mti / totals.sessionCount) : 0,
+      };
+    })
+    .filter(Boolean);
+}
+
+function createChartCard(metricConfig, aggregatedWeeks) {
+  const values = aggregatedWeeks.map((week) => Number(week[metricConfig.key]) || 0);
+  const maxValue = Math.max(...values);
+
+  if (!Number.isFinite(maxValue) || maxValue <= 0) {
+    return null;
+  }
+
+  const card = document.createElement('div');
+  card.className = 'chart-card';
+
+  const title = document.createElement('h4');
+  title.className = 'chart-card__title';
+  title.textContent = metricConfig.label;
+  card.appendChild(title);
+
+  const bars = document.createElement('div');
+  bars.className = 'chart-bars';
+
+  aggregatedWeeks.forEach((week, index) => {
+    const value = values[index];
+    const wrapper = document.createElement('div');
+    wrapper.className = 'chart-bar-wrapper';
+
+    const bar = document.createElement('div');
+    bar.className = 'chart-bar';
+    const height = computeLogScaleHeight(value, maxValue);
+    bar.style.height = `${height}%`;
+
+    const formattedValue = formatMetricValue(value, metricConfig.unit);
+    bar.title = `${week.weekLabel}: ${formattedValue}`;
+    bar.setAttribute('aria-label', `${week.weekLabel}: ${formattedValue}`);
+
+    const valueLabel = document.createElement('span');
+    valueLabel.className = 'chart-bar__value';
+    valueLabel.textContent = formattedValue;
+
+    const weekLabel = document.createElement('span');
+    weekLabel.className = 'chart-bar__label';
+    weekLabel.textContent = week.weekLabel;
+
+    wrapper.append(bar, valueLabel, weekLabel);
+    bars.appendChild(wrapper);
+  });
+
+  card.appendChild(bars);
+  return card;
+}
+
+function createChartsSection(program) {
+  const aggregatedWeeks = aggregateWeekMetrics(program);
+
+  if (aggregatedWeeks.length === 0) {
+    return null;
+  }
+
+  const chartCards = METRIC_CONFIGS.map((config) =>
+    createChartCard(config, aggregatedWeeks),
+  ).filter(Boolean);
+
+  if (chartCards.length === 0) {
+    return null;
+  }
+
+  chartInstanceCounter += 1;
+  const section = document.createElement('section');
+  section.className = 'program-charts';
+  section.setAttribute('role', 'region');
+  section.setAttribute('aria-label', 'Графики прогресса интенсивности');
+
+  const toggle = document.createElement('button');
+  toggle.type = 'button';
+  toggle.className = 'ui-button ui-button--secondary chart-toggle';
+  toggle.textContent = 'Показать графики прогресса';
+
+  const body = document.createElement('div');
+  body.className = 'chart-body';
+  body.hidden = true;
+  const bodyId = `program-charts-${chartInstanceCounter}`;
+  body.id = bodyId;
+  toggle.setAttribute('aria-controls', bodyId);
+  toggle.setAttribute('aria-expanded', 'false');
+
+  const grid = document.createElement('div');
+  grid.className = 'chart-grid';
+  chartCards.forEach((card) => grid.appendChild(card));
+
+  const hint = document.createElement('p');
+  hint.className = 'chart-hint';
+  hint.textContent =
+    'Высота столбцов строится по логарифмической шкале, чтобы уместить разные нагрузки.';
+
+  body.append(grid, hint);
+
+  toggle.addEventListener('click', () => {
+    const wasHidden = body.hidden;
+    body.hidden = !body.hidden;
+    toggle.setAttribute('aria-expanded', String(wasHidden));
+    toggle.textContent = wasHidden ? 'Скрыть графики' : 'Показать графики прогресса';
+  });
+
+  section.append(toggle, body);
+  return section;
 }
 
 function createIntensitySummary(summary) {
@@ -111,39 +289,23 @@ function createWorkSetsSection({ topSet, backoffSets }) {
   return container;
 }
 
-function createAccessoriesSection(accessories) {
-  if (!Array.isArray(accessories) || accessories.length === 0) {
+function createRestSection(restInterval) {
+  if (!restInterval) {
     return null;
   }
 
-  const wrapper = document.createElement('div');
-  wrapper.className = 'session-accessories';
+  const wrapper = document.createElement('p');
+  wrapper.className = 'session-rest';
 
-  const title = document.createElement('div');
-  title.className = 'session-accessories__title';
-  title.textContent = 'Прогрессия подсобки';
-  wrapper.appendChild(title);
+  const label = document.createElement('span');
+  label.className = 'session-rest__label';
+  label.textContent = 'Отдых между подходами: ';
 
-  const list = document.createElement('ul');
-  list.className = 'session-accessories__list';
+  const value = document.createElement('span');
+  value.className = 'session-rest__value';
+  value.textContent = restInterval;
 
-  accessories.forEach((accessory) => {
-    const item = document.createElement('li');
-    item.className = 'session-accessories__item';
-
-    const name = document.createElement('span');
-    name.className = 'session-accessories__name';
-    name.textContent = accessory?.name || 'Подсобка';
-
-    const prescription = document.createElement('span');
-    prescription.className = 'session-accessories__prescription';
-    prescription.textContent = accessory?.prescription || '—';
-
-    item.append(name, prescription);
-    list.appendChild(item);
-  });
-
-  wrapper.appendChild(list);
+  wrapper.append(label, value);
   return wrapper;
 }
 
@@ -159,18 +321,20 @@ function createSessionCard(session) {
 
   const intensitySummary = createIntensitySummary(session?.intensitySummary);
   const workSetsSection = createWorkSetsSection(session || {});
-  const accessorySection = createAccessoriesSection(session?.accessories);
+  const restSection = createRestSection(session?.restInterval);
 
   const sessionLabel = session?.dayLabel ? `Тренировка ${session.dayLabel}` : 'Тренировка';
   card.setAttribute('aria-label', `${sessionLabel}. Топ-сет: ${session?.topSet || '—'}`);
-  card.append(day, workSetsSection);
+  card.appendChild(day);
 
   if (intensitySummary) {
     card.appendChild(intensitySummary);
   }
 
-  if (accessorySection) {
-    card.appendChild(accessorySection);
+  card.appendChild(workSetsSection);
+
+  if (restSection) {
+    card.appendChild(restSection);
   }
   return card;
 }
@@ -222,6 +386,12 @@ function buildProgramContainer(program) {
   program.weeks.forEach((week, index) => {
     container.appendChild(createWeekBlock(week, index + 1));
   });
+
+  const chartsSection = createChartsSection(program);
+
+  if (chartsSection) {
+    container.appendChild(chartsSection);
+  }
 
   return container;
 }
