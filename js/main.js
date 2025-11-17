@@ -43,6 +43,7 @@ const FORM_STATE_FIELDS = [
   'movementType',
   'goal',
   'experienceLevel',
+  'talentLevel',
   'sessionsPerWeek',
   'scheme',
   'weeks',
