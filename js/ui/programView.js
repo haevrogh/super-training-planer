@@ -54,7 +54,7 @@ function createWeekBlock(week, fallbackNumber) {
 
   const title = document.createElement('h3');
   title.className = 'week-title';
-  title.textContent = `Week ${weekNumber}`;
+  title.textContent = `Неделя ${weekNumber}`;
   weekBlock.appendChild(title);
 
   const sessions = Array.isArray(week?.sessions) ? week.sessions : [];
@@ -76,8 +76,8 @@ function buildProgramContainer(program) {
   title.className = 'program-title';
 
   const weekCount = Array.isArray(program?.weeks) ? program.weeks.length : 0;
-  const titleSuffix = weekCount > 0 ? ` — ${weekCount} Weeks` : '';
-  title.textContent = `Program: ${program?.name || 'Training Plan'}${titleSuffix}`;
+  const titleSuffix = weekCount > 0 ? ` — ${weekCount} нед.` : '';
+  title.textContent = `Программа: ${program?.name || 'План тренировки'}${titleSuffix}`;
 
   container.appendChild(title);
 

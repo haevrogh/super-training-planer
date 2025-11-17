@@ -15,42 +15,42 @@ const SESSION_DAYS = ['Пн', 'Чт'];
 
 const WEEK_CONFIGS = [
   {
-    label: 'Accumulation 1',
+    label: 'Аккумуляция 1',
     percent: 0.74,
     reps: '6-8',
     rpe: '7-8',
     backoff: { sets: 2, reps: 6, rpe: '6-7' },
   },
   {
-    label: 'Accumulation 2',
+    label: 'Аккумуляция 2',
     percent: 0.78,
     reps: '6-8',
     rpe: '7-8',
     backoff: { sets: 2, reps: 6, rpe: '6-7' },
   },
   {
-    label: 'Transmutation',
+    label: 'Трансмутация',
     percent: 0.84,
     reps: '4',
     rpe: '~8',
     backoff: { sets: 2, reps: 4, rpe: '~7' },
   },
   {
-    label: 'Heavy Triples',
+    label: 'Тяжёлые тройки',
     percent: 0.88,
     reps: '3',
     rpe: '8-9',
     backoff: { sets: 2, reps: 3, rpe: '7-8' },
   },
   {
-    label: 'Peaking Doubles',
+    label: 'Пиковые двойки',
     percent: 0.92,
     reps: '2-3',
     rpe: '~9',
     backoff: { sets: 2, reps: 2, rpe: '8-9' },
   },
   {
-    label: 'Test Week',
+    label: 'Тестовая неделя',
     testWeek: true,
   },
 ];
@@ -63,7 +63,7 @@ function buildSession(topSetLine, backoffSetLines) {
 
 function buildWeekPayload(weekNumber, config, oneRm) {
   if (config.testWeek) {
-    const sessions = buildSession('Test week (perform 1–2 heavy singles)', []);
+    const sessions = buildSession('Тестовая неделя (1–2 тяжёлых сингла)', []);
 
     return createProgramWeek({
       weekNumber,
@@ -102,7 +102,7 @@ export function generateTopSetProgram(userInput, oneRm) {
 
   return createProgram({
     id: 'top-set-backoff',
-    name: 'Top Set + Backoff',
+    name: 'Топ-сет + добивка',
     userInput: userInput || null,
     oneRm: safeOneRm,
     weeks,

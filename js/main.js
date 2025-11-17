@@ -16,12 +16,27 @@ const SCHEME_GENERATORS = {
   'double-progression': generateDoubleProgressionProgram,
 };
 
-const PROGRAM_NAME_PROMPT = 'Введите имя программы';
+const PROGRAM_NAME_PROMPT = 'Введите название программы';
 const LAST_FORM_STATE_KEY = 'lastFormState';
 const TRAINING_FORM_ID = 'training-form';
 const RESULT_CONTAINER_ID = 'result';
+const SAVE_BUTTON_ID = 'save-program';
+
+const MOVEMENT_TYPE_LABELS = {
+  compound: 'Базовое движение',
+  isolation: 'Изолированное движение',
+};
+
+const GOAL_LABELS = {
+  strength: 'Сила',
+  hypertrophy: 'Гипертрофия',
+  endurance: 'Выносливость',
+};
 
 const FORM_STATE_FIELDS = ['weight', 'reps', 'movementType', 'goal', 'scheme', 'weeks'];
+
+let pendingProgram = null;
+let saveButtonElement = null;
 
 function getTrainingFormElement() {
   return document.getElementById(TRAINING_FORM_ID);
@@ -29,6 +44,31 @@ function getTrainingFormElement() {
 
 function getResultContainerElement() {
   return document.getElementById(RESULT_CONTAINER_ID);
+}
+
+function getSaveButtonElement() {
+  if (saveButtonElement) {
+    return saveButtonElement;
+  }
+
+  saveButtonElement = document.getElementById(SAVE_BUTTON_ID);
+  return saveButtonElement;
+}
+
+function updateSaveButtonState(isEnabled) {
+  const button = getSaveButtonElement();
+
+  if (!button) {
+    return;
+  }
+
+  button.disabled = !isEnabled;
+  button.setAttribute('aria-disabled', String(!isEnabled));
+}
+
+function setPendingProgram(program) {
+  pendingProgram = program || null;
+  updateSaveButtonState(Boolean(program));
 }
 
 function saveLastFormState(formInput) {
@@ -95,6 +135,7 @@ function setupFormChangeHandler() {
 
   const handleFormChange = () => {
     clearProgram();
+    setPendingProgram(null);
   };
 
   form.addEventListener('input', handleFormChange);
@@ -117,12 +158,51 @@ function resolveSchemeGenerator(schemeKey) {
   return generateTopSetProgram;
 }
 
+function formatWeeksLabel(weeks) {
+  if (!Number.isFinite(weeks) || weeks <= 0) {
+    return 'программа';
+  }
+
+  const remainder10 = weeks % 10;
+  const remainder100 = weeks % 100;
+
+  if (remainder10 === 1 && remainder100 !== 11) {
+    return `${weeks} неделя`;
+  }
+
+  if (
+    remainder10 >= 2 &&
+    remainder10 <= 4 &&
+    !(remainder100 >= 12 && remainder100 <= 14)
+  ) {
+    return `${weeks} недели`;
+  }
+
+  return `${weeks} недель`;
+}
+
+function translateMovementType(value) {
+  if (MOVEMENT_TYPE_LABELS[value]) {
+    return MOVEMENT_TYPE_LABELS[value];
+  }
+
+  return 'Движение';
+}
+
+function translateGoal(value) {
+  if (GOAL_LABELS[value]) {
+    return GOAL_LABELS[value];
+  }
+
+  return 'Цель';
+}
+
 function generateDefaultProgramName(userInput) {
-  const movement = userInput?.movementType || 'Movement';
-  const goal = userInput?.goal || 'Goal';
+  const movement = translateMovementType(userInput?.movementType);
+  const goal = translateGoal(userInput?.goal);
   const weeks = Number(userInput?.weeks) || 0;
-  const weeksLabel = weeks > 0 ? `${weeks} weeks` : 'Program';
-  return `${movement} - ${goal} - ${weeksLabel}`;
+  const weeksLabel = formatWeeksLabel(weeks);
+  return `${movement} · ${goal} · ${weeksLabel}`;
 }
 
 function requestProgramName(fallbackName) {
@@ -182,6 +262,7 @@ function handleProgramSelect(id) {
 
   clearProgram();
   renderProgram(program);
+  setPendingProgram(null);
   scrollToResult();
 }
 
@@ -209,12 +290,43 @@ function handleGenerate(formInput) {
   const estimatedOneRm = calculateOneRm(userInput.weight, userInput.reps);
   const generator = resolveSchemeGenerator(userInput.scheme);
   const program = generator(userInput, estimatedOneRm);
-  const persistedProgram = persistProgram(program) || program;
 
   clearProgram();
+  renderProgram(program);
+  setPendingProgram(program);
+  scrollToResult();
+}
+
+function handleSaveProgram() {
+  if (!pendingProgram) {
+    return;
+  }
+
+  const persistedProgram = persistProgram(pendingProgram);
+
+  if (!persistedProgram) {
+    return;
+  }
+
   renderProgram(persistedProgram);
   scrollToResult();
+  setPendingProgram(null);
   refreshProgramList();
+}
+
+function setupSaveButton() {
+  const button = getSaveButtonElement();
+
+  if (!button) {
+    return;
+  }
+
+  button.addEventListener('click', (event) => {
+    event.preventDefault();
+    handleSaveProgram();
+  });
+
+  updateSaveButtonState(false);
 }
 
 function init() {
@@ -222,6 +334,7 @@ function init() {
   applyLastFormState();
   setupFormChangeHandler();
   onGenerateProgram(handleGenerate);
+  setupSaveButton();
   refreshProgramList();
 }
 

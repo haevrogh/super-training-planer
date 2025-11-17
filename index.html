@@ -3,13 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Strength Program Calculator</title>
+    <title>Калькулятор силовых программ</title>
     <link rel="stylesheet" href="styles/base.css" />
   </head>
   <body>
     <header class="app-header">
       <div class="app-header__content">
-        <h1>Strength Program Calculator</h1>
+        <h1>Калькулятор силовых программ</h1>
         <p class="tagline">Минималистичный планировщик силовых программ</p>
       </div>
     </header>
@@ -67,9 +67,9 @@
             <div class="form__row">
               <label for="scheme-select">Схема</label>
               <select id="scheme-select" name="scheme" class="ui-select">
-                <option value="top-set">Top Set</option>
+                <option value="top-set">Топ-сет</option>
                 <option value="linear-5x5">Линейная 5×5</option>
-                <option value="double-progression">Double Progression</option>
+                <option value="double-progression">Двойная прогрессия</option>
               </select>
             </div>
 
@@ -94,7 +94,7 @@
               aria-label="Сгенерировать новую программу"
               role="button"
             >
-              Generate Program
+              Сформировать план
             </button>
           </form>
         </div>
@@ -105,6 +105,17 @@
           <h2 id="result-panel-title" class="panel-title">План тренировки</h2>
         </div>
         <div class="panel__body" aria-live="polite">
+          <div class="panel__actions">
+            <button
+              id="save-program"
+              class="ui-button ui-button--secondary"
+              type="button"
+              aria-disabled="true"
+              disabled
+            >
+              Сохранить программу
+            </button>
+          </div>
           <div id="result"></div>
         </div>
       </section>

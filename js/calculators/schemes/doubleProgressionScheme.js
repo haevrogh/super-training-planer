@@ -10,7 +10,7 @@ import { roundToDumbbell } from '../helpers/dumbbellRounding.js';
 const DEFAULT_WEEKS = 6;
 const SESSION_DAYS = ['Пн', 'Чт'];
 const BASE_PERCENT = 0.7;
-const NOTE = 'Consider adding weight next week';
+const NOTE = 'Подумай об увеличении веса на следующей неделе';
 
 function buildDoubleProgressionWeek(weekNumber, targetReps, workingWeight) {
   const setLine = `${workingWeight}×${targetReps}`;
@@ -45,7 +45,7 @@ export function generateDoubleProgressionProgram(userInput, oneRm) {
 
   return createProgram({
     id: 'double-progression',
-    name: 'Double Progression 8–12',
+    name: 'Двойная прогрессия 8–12',
     userInput: userInput || null,
     oneRm: safeOneRm,
     weeks,
