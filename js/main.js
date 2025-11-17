@@ -43,6 +43,7 @@ const FORM_STATE_FIELDS = [
   'movementType',
   'goal',
   'experienceLevel',
+  'recoveryLevel',
   'sessionsPerWeek',
   'scheme',
   'weeks',
@@ -152,6 +153,10 @@ function applyLastFormState() {
 
   if (!form || !storedState) {
     return;
+  }
+
+  if (storedState.talentLevel && !storedState.recoveryLevel) {
+    storedState.recoveryLevel = storedState.talentLevel;
   }
 
   FORM_STATE_FIELDS.forEach((field) => {

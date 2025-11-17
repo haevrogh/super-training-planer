@@ -9,10 +9,22 @@ const MOVEMENT_INTENSITY_ADJUSTMENTS = {
   isolation: -0.03,
 };
 
+const RECOVERY_INTENSITY_ADJUSTMENTS = {
+  limited: -0.03,
+  balanced: 0,
+  gifted: 0.02,
+};
+
 const GOAL_VOLUME_MULTIPLIERS = {
   strength: 1,
   hypertrophy: 1.35,
   endurance: 1.15,
+};
+
+const RECOVERY_VOLUME_MULTIPLIERS = {
+  limited: 0.85,
+  balanced: 1,
+  gifted: 1.1,
 };
 
 const SESSION_DAY_TEMPLATES = {
@@ -50,6 +62,16 @@ const EXPERIENCE_REP_SHIFT = {
   advanced: -1,
 };
 
+const RECOVERY_REP_SHIFT = {
+  limited: 1,
+  balanced: 0,
+  gifted: -1,
+};
+
+function getRecoveryLevel(userInput = {}) {
+  return userInput.recoveryLevel || userInput.talentLevel || 'balanced';
+}
+
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
@@ -75,12 +97,18 @@ export function resolveIntensityPercent(basePercent, userInput = {}) {
     EXPERIENCE_INTENSITY_ADJUSTMENTS[userInput.experienceLevel] || 0;
   const movementAdjustment =
     MOVEMENT_INTENSITY_ADJUSTMENTS[userInput.movementType] || 0;
-  const adjusted = basePercent + experienceAdjustment + movementAdjustment;
+  const recoveryAdjustment =
+    RECOVERY_INTENSITY_ADJUSTMENTS[getRecoveryLevel(userInput)] || 0;
+  const adjusted =
+    basePercent + experienceAdjustment + movementAdjustment + recoveryAdjustment;
   return clamp(adjusted, 0.5, 0.97);
 }
 
 export function resolveVolumeMultiplier(userInput = {}) {
-  return GOAL_VOLUME_MULTIPLIERS[userInput.goal] || 1;
+  const baseMultiplier = GOAL_VOLUME_MULTIPLIERS[userInput.goal] || 1;
+  const recoveryMultiplier =
+    RECOVERY_VOLUME_MULTIPLIERS[getRecoveryLevel(userInput)] || 1;
+  return baseMultiplier * recoveryMultiplier;
 }
 
 export function resolveSessionDays(userInput = {}) {
@@ -94,7 +122,9 @@ export function resolveSessionDays(userInput = {}) {
 export function resolveDoubleProgressionRange(userInput = {}) {
   const baseRange =
     DOUBLE_PROGRESSION_RANGES[userInput.goal] || DOUBLE_PROGRESSION_RANGES.strength;
-  const shift = EXPERIENCE_REP_SHIFT[userInput.experienceLevel] || 0;
+  const experienceShift = EXPERIENCE_REP_SHIFT[userInput.experienceLevel] || 0;
+  const recoveryShift = RECOVERY_REP_SHIFT[getRecoveryLevel(userInput)] || 0;
+  const shift = experienceShift + recoveryShift;
   const start = clamp(baseRange.start + shift, 5, 20);
   const end = clamp(Math.max(baseRange.end + shift, start + 1), start + 1, 25);
   return { start, end };
