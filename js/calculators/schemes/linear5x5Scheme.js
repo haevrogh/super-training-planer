@@ -11,6 +11,8 @@ import {
   resolveSessionDays,
   resolveVolumeMultiplier,
 } from '../helpers/trainingAdjustments.js';
+import { buildIntensitySummary } from '../helpers/intensitySummary.js';
+import { buildAccessoryProgression } from '../helpers/accessoryProgression.js';
 
 const DEFAULT_WEEKS = 6;
 
@@ -23,9 +25,22 @@ const WEEK_CONFIGS = [
   { label: 'Тестовая неделя', testWeek: true },
 ];
 
-function buildLinearSession(topLine, backoffLines, sessionDays) {
-  return sessionDays.map((dayLabel) =>
-    createProgramSession({ dayLabel, topSet: topLine, backoffSets: [...backoffLines] }),
+function buildLinearSession(
+  topLine,
+  backoffLines,
+  sessionDays,
+  weekNumber,
+  userInput,
+  intensitySummary,
+) {
+  return sessionDays.map((dayLabel, sessionIndex) =>
+    createProgramSession({
+      dayLabel,
+      topSet: topLine,
+      backoffSets: [...backoffLines],
+      intensitySummary,
+      accessories: buildAccessoryProgression(weekNumber, sessionIndex, userInput),
+    }),
   );
 }
 
@@ -35,6 +50,9 @@ function buildLinearWeek(weekNumber, config, oneRm, userInput, sessionDays, volu
       'Тестовая неделя (до тяжёлых троек/синглов)',
       [],
       sessionDays,
+      weekNumber,
+      userInput,
+      null,
     );
 
     return createProgramWeek({
@@ -50,7 +68,24 @@ function buildLinearWeek(weekNumber, config, oneRm, userInput, sessionDays, volu
   const remainingSets = Math.max(0, totalSets - 1);
   const backoffLine = `${workingWeight}×${config.reps} @ RPE ${config.rpe}`;
   const backoffSets = Array.from({ length: remainingSets }, () => backoffLine);
-  const sessions = buildLinearSession(topSetLine, backoffSets, sessionDays);
+  const intensitySummary = buildIntensitySummary({
+    topWeight: workingWeight,
+    topReps: config.reps,
+    backoffWeight: workingWeight,
+    backoffReps: config.reps,
+    backoffSets: remainingSets,
+    intensityPercent,
+    oneRm,
+    rpe: config.rpe,
+  });
+  const sessions = buildLinearSession(
+    topSetLine,
+    backoffSets,
+    sessionDays,
+    weekNumber,
+    userInput,
+    intensitySummary,
+  );
 
   return createProgramWeek({
     weekNumber,

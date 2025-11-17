@@ -33,10 +33,18 @@ export function createProgramWeek({ weekNumber, sessions } = {}) {
   };
 }
 
-export function createProgramSession({ dayLabel, topSet, backoffSets } = {}) {
+export function createProgramSession({
+  dayLabel,
+  topSet,
+  backoffSets,
+  intensitySummary,
+  accessories,
+} = {}) {
   return {
     dayLabel: dayLabel || '',
     topSet: topSet || '',
     backoffSets: Array.isArray(backoffSets) ? backoffSets : [],
+    intensitySummary: intensitySummary || null,
+    accessories: Array.isArray(accessories) ? accessories : [],
   };
 }
