@@ -86,15 +86,23 @@ export function buildIntensitySummary({
       ? Math.min(averageWeight / oneRm, 1)
       : Math.max(0, Number(intensityPercent) || 0);
   const avgIntensity = Math.round(normalizedIntensity * 100);
+  const relativeLoad =
+    Number.isFinite(oneRm) && oneRm > 0
+      ? Math.min(safeTopWeight / oneRm, 1)
+      : normalizedIntensity;
+  const totalReps = safeTopReps + safeBackoffReps * safeBackoffSets;
 
   const rpeValue = parseRpeValue(rpe);
-  const fatigueScore = totalSets * rpeValue;
-  const benefitScore = avgIntensity;
-  const fPlusB = Math.round(fatigueScore + benefitScore);
+  const mechanicalTensionIndex = Math.round(relativeLoad * totalReps * 10);
+  const velocityFactor = Math.max(0.2, 1 - relativeLoad * 0.7);
+  const forceVelocity = Math.round(safeTopWeight * velocityFactor);
+  const normalizedLoadVolume = Math.round(tonnage * (rpeValue / 10));
 
   return {
     tonnage: Math.round(tonnage),
     avgIntensity,
-    fPlusB,
+    mti: mechanicalTensionIndex,
+    forceVelocity,
+    normalizedLoadVolume,
   };
 }
