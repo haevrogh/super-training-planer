@@ -11,6 +11,11 @@ import { renderProgram, clearProgram } from './ui/programView.js';
 import { generateTopSetProgram } from './calculators/schemes/topSetScheme.js';
 import { generateLinear5x5Program } from './calculators/schemes/linear5x5Scheme.js';
 import { generateDoubleProgressionProgram } from './calculators/schemes/doubleProgressionScheme.js';
+import { generateTexasMethodProgram } from './calculators/schemes/texasMethodScheme.js';
+import { generateHeavyLightMediumProgram } from './calculators/schemes/heavyLightMediumScheme.js';
+import { generateDupProgram } from './calculators/schemes/dupScheme.js';
+import { generateSheikoStyleProgram } from './calculators/schemes/sheikoScheme.js';
+import { generateConjugateProgram } from './calculators/schemes/conjugateScheme.js';
 import { loadPrograms, saveProgram, deleteProgram } from './storage.js';
 import { renderProgramList } from './ui/programList.js';
 
@@ -18,6 +23,11 @@ const SCHEME_GENERATORS = {
   'top-set': generateTopSetProgram,
   'linear-5x5': generateLinear5x5Program,
   'double-progression': generateDoubleProgressionProgram,
+  'texas-method': generateTexasMethodProgram,
+  'heavy-light-medium': generateHeavyLightMediumProgram,
+  dup: generateDupProgram,
+  'sheiko-style': generateSheikoStyleProgram,
+  conjugate: generateConjugateProgram,
 };
 
 const PROGRAM_NAME_PROMPT = 'Введите название программы';
