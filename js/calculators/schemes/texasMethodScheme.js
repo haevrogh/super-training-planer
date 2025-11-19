@@ -54,6 +54,8 @@ function buildVolumeSession({ dayLabel, workingWeight, sets, reps, userInput }) 
     intensityPercent: null,
     oneRm: null,
     rpe: VOLUME_DAY_RPE,
+    movementType: userInput?.movementType,
+    goal: userInput?.goal,
   });
   const coachingNotes = [
     'Объёмный день: классический 5×5 с прогрессией по весу.',
@@ -92,6 +94,8 @@ function buildLightSession({
     intensityPercent: null,
     oneRm: null,
     rpe: LIGHT_DAY_RPE,
+    movementType: userInput?.movementType,
+    goal: userInput?.goal,
   });
   const coachingNotes = ['Лёгкий день: техника и скорость, вес ≈85% от объёма.'];
 
@@ -130,6 +134,8 @@ function buildIntensitySession({
     intensityPercent: null,
     oneRm: null,
     rpe: INTENSITY_DAY_RPE,
+    movementType: userInput?.movementType,
+    goal: userInput?.goal,
   });
   const coachingNotes = ['Интенсивный день: один тяжёлый сет и два добивающих.'];
 
@@ -170,6 +176,8 @@ function buildDeloadWeek({
         intensityPercent: 0.6,
         oneRm: baseWeight || 0,
         rpe: '6-7',
+        movementType: userInput?.movementType,
+        goal: userInput?.goal,
       }),
       restInterval: resolveRestInterval(userInput, {
         reps: 5,

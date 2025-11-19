@@ -74,6 +74,8 @@ function buildDeloadWeek({
     intensityPercent: 0.6,
     oneRm: baseWeight / 0.85 || 0,
     rpe: '6-7',
+    movementType: userInput?.movementType,
+    goal: userInput?.goal,
   });
   const restInterval = resolveRestInterval(userInput, {
     reps: baseReps,
@@ -145,6 +147,8 @@ function buildWorkWeek({
     intensityPercent: finalPercent,
     oneRm: projectedOneRm,
     rpe: rpeLabel,
+    movementType: userInput?.movementType,
+    goal: userInput?.goal,
   });
 
   const sessions = buildSessions({

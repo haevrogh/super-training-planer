@@ -69,6 +69,8 @@ function buildDeloadWeek({ weekNumber, sessionDays, userInput, baseWeight }) {
     intensityPercent: 0.6,
     oneRm: baseWeight / 0.9 || 0,
     rpe: '6-7',
+    movementType: userInput?.movementType,
+    goal: userInput?.goal,
   });
 
   const sessions = buildSessions({
@@ -123,6 +125,8 @@ function buildWorkWeek({
     intensityPercent: guard.intensityPercent || backoffWeight / projectedOneRm,
     oneRm: projectedOneRm,
     rpe: TOP_SET_RPE,
+    movementType: userInput?.movementType,
+    goal: userInput?.goal,
   });
 
   const sessions = buildSessions({

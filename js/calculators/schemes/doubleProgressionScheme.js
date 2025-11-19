@@ -107,6 +107,8 @@ function buildDeloadWeek({
     intensityPercent: 0.6,
     oneRm: workingWeight / 0.75 || 0,
     rpe: '6-7',
+    movementType: userInput?.movementType,
+    goal: userInput?.goal,
   });
   const coachingNotes = ['Разгрузка двойной прогрессии — сохраним вес и объём в 2 лёгких подхода.'];
   const rpeGuide = buildRpeGuide('6-7', userInput.experienceLevel);
@@ -153,6 +155,8 @@ function buildWorkWeek({
     intensityPercent: oneRm > 0 ? workingWeight / oneRm : null,
     oneRm,
     rpe: SESSION_RPE,
+    movementType: userInput?.movementType,
+    goal: userInput?.goal,
   });
   const coachingNotes = [`Диапазон повторений: ${repRange.start}–${repRange.end}.`, progressNote];
 

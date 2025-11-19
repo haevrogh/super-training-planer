@@ -379,6 +379,16 @@ label {
   display: block;
 }
 
+.session-recovery {
+  margin: 8px 0 0;
+  font-size: 0.9rem;
+  color: #475467;
+  background: #f0f7ff;
+  border: 1px solid #d6e8ff;
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+}
+
 .session-metric-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -406,6 +416,60 @@ label {
 .session-metric__value {
   font-weight: 600;
   color: var(--text);
+}
+
+.session-muscles {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+}
+
+.session-muscles__title {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--subtext);
+  margin-bottom: 6px;
+}
+
+.session-muscles__list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.session-muscles__row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  padding: 6px 8px;
+  background: #fafafa;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.session-muscles__label {
+  font-weight: 600;
+  color: var(--text);
+  z-index: 1;
+}
+
+.session-muscles__value {
+  font-size: 0.85rem;
+  color: var(--subtext);
+  z-index: 1;
+}
+
+.session-muscles__bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: rgba(124, 58, 237, 0.12);
+  border-radius: var(--radius-sm);
+  z-index: 0;
 }
 
 .session-worksets {

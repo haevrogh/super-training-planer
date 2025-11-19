@@ -1,6 +1,7 @@
 // UI rendering of program weeks and sessions
 
 import { REST_GUIDANCE_NOTE } from '../calculators/helpers/trainingAdjustments.js';
+import { resolveStressLabel } from '../calculators/helpers/intensitySummary.js';
 
 const RESULT_CONTAINER_ID = 'result';
 const numberFormatter = new Intl.NumberFormat('ru-RU');
@@ -21,6 +22,15 @@ const FORMULA_LABELS = {
   lombardi: 'Ломбарди',
   oconner: 'О’Коннер',
   wendler: 'Вендлер',
+};
+
+const MUSCLE_LABELS = {
+  legs: 'Ноги',
+  back: 'Спина',
+  chest: 'Грудь',
+  shoulders: 'Плечи',
+  arms: 'Руки',
+  core: 'Кор',
 };
 
 let chartInstanceCounter = 0;
@@ -141,6 +151,22 @@ function buildProgramSummary(program) {
   return summaryGrid;
 }
 
+function accumulateTonnageByGroup(target, source) {
+  if (!source || typeof source !== 'object') {
+    return;
+  }
+
+  Object.entries(source).forEach(([group, value]) => {
+    const numeric = Number(value);
+
+    if (!Number.isFinite(numeric) || numeric <= 0) {
+      return;
+    }
+
+    target[group] = (target[group] || 0) + numeric;
+  });
+}
+
 function aggregateWeekMetrics(program) {
   if (!program || !Array.isArray(program.weeks)) {
     return [];
@@ -154,6 +180,9 @@ function aggregateWeekMetrics(program) {
         normalizedLoadVolume: 0,
         mti: 0,
         sessionCount: 0,
+        tonnageByGroup: {},
+        stressScore: 0,
+        recoveryHours: 0,
       };
 
       sessions.forEach((session) => {
@@ -167,6 +196,9 @@ function aggregateWeekMetrics(program) {
         totals.tonnage += Number(summary.tonnage) || 0;
         totals.normalizedLoadVolume += Number(summary.normalizedLoadVolume) || 0;
         totals.mti += Number(summary.mti) || 0;
+        totals.stressScore += Number(summary.stressScore) || 0;
+        totals.recoveryHours += Number(summary.recommendedRestHours) || 0;
+        accumulateTonnageByGroup(totals.tonnageByGroup, summary.tonnageByGroup);
       });
 
       if (
@@ -184,6 +216,17 @@ function aggregateWeekMetrics(program) {
         normalizedLoadVolume: Math.round(totals.normalizedLoadVolume),
         mti:
           totals.sessionCount > 0 ? Math.round(totals.mti / totals.sessionCount) : 0,
+        tonnageByGroup: totals.tonnageByGroup,
+        stressScore: totals.sessionCount > 0 ? totals.stressScore / totals.sessionCount : 0,
+        recommendedRestHours:
+          totals.sessionCount > 0 ? Math.round(totals.recoveryHours / totals.sessionCount) : 0,
+        stressLabel: resolveStressLabel(
+          totals.sessionCount > 0 ? totals.stressScore / totals.sessionCount : 0,
+        ),
+        recommendedRestDays:
+          totals.sessionCount > 0
+            ? Math.max(1, Math.round((totals.recoveryHours / totals.sessionCount / 24) * 10) / 10)
+            : 0,
       };
     })
     .filter(Boolean);
@@ -415,6 +458,58 @@ function createChartsSection(program) {
   return section;
 }
 
+function createMuscleSplitSection(tonnageByGroup) {
+  if (!tonnageByGroup || typeof tonnageByGroup !== 'object') {
+    return null;
+  }
+
+  const entries = Object.entries(tonnageByGroup)
+    .map(([group, value]) => [group, Number(value)])
+    .filter(([, value]) => Number.isFinite(value) && value > 0)
+    .sort((a, b) => b[1] - a[1]);
+
+  if (entries.length === 0) {
+    return null;
+  }
+
+  const total = entries.reduce((sum, [, value]) => sum + value, 0);
+  const wrapper = document.createElement('div');
+  wrapper.className = 'session-muscles';
+
+  const title = document.createElement('div');
+  title.className = 'session-muscles__title';
+  title.textContent = 'Распределение тоннажа';
+  wrapper.appendChild(title);
+
+  const list = document.createElement('div');
+  list.className = 'session-muscles__list';
+
+  entries.forEach(([group, value]) => {
+    const row = document.createElement('div');
+    row.className = 'session-muscles__row';
+
+    const label = document.createElement('span');
+    label.className = 'session-muscles__label';
+    label.textContent = MUSCLE_LABELS[group] || group;
+
+    const amount = document.createElement('span');
+    amount.className = 'session-muscles__value';
+    const percent = total > 0 ? Math.round((value / total) * 100) : 0;
+    amount.textContent = `${numberFormatter.format(value)} кг · ${percent}%`;
+
+    const bar = document.createElement('span');
+    bar.className = 'session-muscles__bar';
+    bar.style.width = `${Math.max(8, percent)}%`;
+    bar.setAttribute('aria-label', `${label.textContent} — ${percent}% тоннажа`);
+
+    row.append(label, amount, bar);
+    list.appendChild(row);
+  });
+
+  wrapper.appendChild(list);
+  return wrapper;
+}
+
 function createIntensitySummary(summary) {
   if (!summary) {
     return null;
@@ -427,6 +522,7 @@ function createIntensitySummary(summary) {
   const previewParts = [];
   const tonnage = formatMetricValue(summary.tonnage, 'кг');
   const mti = formatMetricValue(summary.mti);
+  const stressBadge = summary.stressLabel || '';
 
   if (tonnage !== '—') {
     previewParts.push(`Тоннаж ${tonnage}`);
@@ -434,6 +530,10 @@ function createIntensitySummary(summary) {
 
   if (mti !== '—') {
     previewParts.push(`MTI ${mti}`);
+  }
+
+  if (stressBadge) {
+    previewParts.push(`Стресс ${stressBadge}`);
   }
 
   if (previewParts.length === 0) {
@@ -479,6 +579,22 @@ function createIntensitySummary(summary) {
       value: formatMetricValue(summary.normalizedLoadVolume, 'кг'),
       hint: 'Normalized Load Volume — объём с учётом RPE',
     },
+    {
+      label: 'Стресс',
+      value:
+        summary.stressLabel && Number.isFinite(summary.stressScore)
+          ? `${summary.stressLabel} (${Math.round(summary.stressScore * 100)}%)`
+          : summary.stressLabel || '—',
+      hint: 'Классификация нагрузки по %1RM, объёму и RPE',
+    },
+    {
+      label: 'Восстановление',
+      value:
+        Number.isFinite(summary.recommendedRestHours) && summary.recommendedRestHours > 0
+          ? `${numberFormatter.format(summary.recommendedRestHours)} ч (~${summary.recommendedRestDays} дн)`
+          : '—',
+      hint: summary.recoveryAdvice || 'Рекомендуемое окно отдыха перед похожей сессией',
+    },
   ];
 
   metrics.forEach((metric) => {
@@ -502,6 +618,19 @@ function createIntensitySummary(summary) {
   });
 
   details.appendChild(metricsGrid);
+
+  if (summary.recoveryAdvice) {
+    const recoveryHint = document.createElement('p');
+    recoveryHint.className = 'session-recovery';
+    recoveryHint.textContent = summary.recoveryAdvice;
+    details.appendChild(recoveryHint);
+  }
+
+  const muscleSection = createMuscleSplitSection(summary.tonnageByGroup);
+
+  if (muscleSection) {
+    details.appendChild(muscleSection);
+  }
 
   toggle.addEventListener('click', () => {
     const willShow = details.hidden;
