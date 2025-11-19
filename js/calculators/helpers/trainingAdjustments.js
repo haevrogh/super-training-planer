@@ -27,6 +27,18 @@ const TALENT_VOLUME_MULTIPLIERS = {
   gifted: 1.1,
 };
 
+const EXPERIENCE_VOLUME_MULTIPLIERS = {
+  novice: 0.92,
+  intermediate: 1,
+  advanced: 1.15,
+};
+
+const EXPERIENCE_PROGRESS_RATES = {
+  novice: 1.1,
+  intermediate: 0.85,
+  advanced: 0.6,
+};
+
 const SESSION_DAY_TEMPLATES = {
   2: ['Пн', 'Чт'],
   3: ['Пн', 'Ср', 'Пт'],
@@ -103,7 +115,13 @@ export function resolveIntensityPercent(basePercent, userInput = {}) {
 export function resolveVolumeMultiplier(userInput = {}) {
   const baseMultiplier = GOAL_VOLUME_MULTIPLIERS[userInput.goal] || 1;
   const talentMultiplier = TALENT_VOLUME_MULTIPLIERS[userInput.talentLevel] || 1;
-  return baseMultiplier * talentMultiplier;
+  const experienceMultiplier =
+    EXPERIENCE_VOLUME_MULTIPLIERS[userInput.experienceLevel] || 1;
+  return baseMultiplier * talentMultiplier * experienceMultiplier;
+}
+
+export function resolveProgressRate(userInput = {}) {
+  return EXPERIENCE_PROGRESS_RATES[userInput.experienceLevel] || EXPERIENCE_PROGRESS_RATES.intermediate;
 }
 
 export function resolveSessionDays(userInput = {}) {
