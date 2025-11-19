@@ -12,8 +12,8 @@ import {
 } from '../helpers/trainingAdjustments.js';
 import { buildIntensitySummary } from '../helpers/intensitySummary.js';
 import { buildRpeGuide } from '../helpers/rpeGuidance.js';
+import { resolveProgramDuration } from '../helpers/programDuration.js';
 
-const DEFAULT_WEEKS = 6;
 const DELOAD_PERCENT = 0.6;
 
 function pickDay(sessionDays, index, fallback) {
@@ -116,8 +116,7 @@ function buildWorkWeek({ weekNumber, projectedOneRm, sessionDays, userInput }) {
 
 export function generateSheikoStyleProgram(userInput, oneRm) {
   const safeOneRm = Number(oneRm) || 0;
-  const requestedWeeks = Number(userInput?.weeks) || DEFAULT_WEEKS;
-  const totalWeeks = Math.max(1, Math.min(requestedWeeks, 10));
+  const totalWeeks = resolveProgramDuration(userInput);
   const sessionDays = resolveSessionDays(userInput);
   const weeklyStep = resolveWeeklyProgressStep(userInput);
   const baseOneRm = safeOneRm || 100;
