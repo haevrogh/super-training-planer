@@ -22,12 +22,13 @@ import { buildIntensitySummary } from '../helpers/intensitySummary.js';
 import { buildRpeGuide } from '../helpers/rpeGuidance.js';
 
 const DEFAULT_WEEKS = 6;
-const SESSION_RPE = 8;
+const STARTING_RPE = 8;
+const SESSION_RPE = 8.5;
 const PROGRESSION_INCREMENT = 2.5;
 const DELOAD_PERCENT = 0.6;
 
 function determineInitialWeight(oneRm, repRangeStart, userInput) {
-  const percent = getWorkingPercent(repRangeStart, SESSION_RPE);
+  const percent = getWorkingPercent(repRangeStart, STARTING_RPE);
   const baseFromOneRm = Number(oneRm) > 0 ? roundToDumbbell(oneRm * percent) : 0;
 
   if (baseFromOneRm > 0) {
@@ -41,6 +42,23 @@ function determineInitialWeight(oneRm, repRangeStart, userInput) {
   }
 
   return roundToDumbbell(20);
+}
+
+function initializeProgressionState({ oneRm, repRange, userInput }) {
+  const startWeight = determineInitialWeight(oneRm, repRange.start, userInput);
+  const userWeight = Number(userInput?.weight);
+  const userReps = Number(userInput?.reps);
+  const weightIncrement = roundToDumbbell(PROGRESSION_INCREMENT);
+  const hasClearedRange =
+    Number.isFinite(userWeight) &&
+    Number.isFinite(userReps) &&
+    userReps >= repRange.end &&
+    startWeight <= userWeight;
+
+  return {
+    workingWeight: hasClearedRange ? roundToDumbbell(startWeight + weightIncrement) : startWeight,
+    currentReps: repRange.start,
+  };
 }
 
 function buildSessions({
@@ -72,19 +90,19 @@ function buildDeloadWeek({
   sessionDays,
   userInput,
   workingWeight,
-  repRange,
+  currentReps,
 }) {
   const deloadWeight = roundToDumbbell(workingWeight * DELOAD_PERCENT);
-  const line = `${deloadWeight}×${repRange.start} @ RPE 6-7`;
+  const line = `${deloadWeight}×${currentReps} @ RPE 6-7`;
   const restInterval = resolveRestInterval(userInput, {
-    reps: repRange.start,
+    reps: currentReps,
     intensityPercent: 0.6,
   });
   const summary = buildIntensitySummary({
     topWeight: deloadWeight,
-    topReps: repRange.start,
+    topReps: currentReps,
     backoffWeight: deloadWeight,
-    backoffReps: repRange.start,
+    backoffReps: currentReps,
     backoffSets: 1,
     intensityPercent: 0.6,
     oneRm: workingWeight / 0.75 || 0,
@@ -118,6 +136,7 @@ function buildWorkWeek({
   totalSets,
   oneRm,
   shouldUseRepProgression,
+  progressNote,
 }) {
   const setLine = `${workingWeight}×${currentReps} @ RPE ${SESSION_RPE}`;
   const restInterval = resolveRestInterval(userInput, {
@@ -135,16 +154,10 @@ function buildWorkWeek({
     oneRm,
     rpe: SESSION_RPE,
   });
-  const coachingNotes = [
-    `Диапазон повторений: ${repRange.start}–${repRange.end}.`,
-    `Если все ${totalSets} подходов по ${repRange.end} — повышаем нагрузку.`,
-  ];
+  const coachingNotes = [`Диапазон повторений: ${repRange.start}–${repRange.end}.`, progressNote];
 
   if (shouldUseRepProgression) {
     coachingNotes.push('Шаг веса слишком крупный — удерживаем вес и добавляем +2 повтора в каждом подходе.');
-  } else {
-    const nextWeight = roundToDumbbell(workingWeight + PROGRESSION_INCREMENT);
-    coachingNotes.push(`Следующий шаг веса: ${nextWeight} кг.`);
   }
 
   const sessions = buildSessions({
@@ -178,10 +191,10 @@ export function generateDoubleProgressionProgram(userInput, oneRm) {
     intensityPercent: null,
   });
   const totalSets = Math.max(2, guard.sets);
-  const initialWeight = determineInitialWeight(safeOneRm, repRange.start, userInput);
-  let workingWeight = initialWeight;
-  let currentReps = Math.max(repRange.start, guard.reps);
   const progressRate = resolveProgressRate(userInput);
+  const initialState = initializeProgressionState({ oneRm: safeOneRm, repRange, userInput });
+  let workingWeight = initialState.workingWeight;
+  let currentReps = initialState.currentReps;
 
   const weeks = [];
 
@@ -192,6 +205,7 @@ export function generateDoubleProgressionProgram(userInput, oneRm) {
       PROGRESSION_INCREMENT,
       userInput.movementType,
     );
+    const repStep = useRepProgression ? 2 : 1;
 
     if (isDeloadWeek(weekNumber, userInput)) {
       weeks.push(
@@ -200,11 +214,21 @@ export function generateDoubleProgressionProgram(userInput, oneRm) {
           sessionDays,
           userInput,
           workingWeight,
-          repRange,
+          currentReps,
         }),
       );
       continue;
     }
+
+    const nextReps = currentReps + repStep;
+    const weightIncrement = roundToDumbbell(PROGRESSION_INCREMENT * progressRate);
+    const willIncreaseWeight = nextReps > repRange.end;
+    const nextWeight = willIncreaseWeight
+      ? roundToDumbbell(workingWeight + weightIncrement)
+      : workingWeight;
+    const progressNote = willIncreaseWeight
+      ? `SUCCESS: Increase weight by ${weightIncrement} кг next week.`
+      : `Продолжаем работу с этим весом, цель — ${nextReps} повт.`;
 
     weeks.push(
       buildWorkWeek({
@@ -217,20 +241,12 @@ export function generateDoubleProgressionProgram(userInput, oneRm) {
         totalSets,
         oneRm: safeOneRm,
         shouldUseRepProgression: useRepProgression,
+        progressNote,
       }),
     );
 
-    if (useRepProgression) {
-      currentReps = Math.min(currentReps + 2, repRange.end);
-      continue;
-    }
-
-    if (weekNumber % 2 === 0) {
-      workingWeight = roundToDumbbell(workingWeight + PROGRESSION_INCREMENT * progressRate);
-      currentReps = repRange.start;
-    } else {
-      currentReps = Math.min(currentReps + 1, repRange.end);
-    }
+    workingWeight = nextWeight;
+    currentReps = willIncreaseWeight ? repRange.start : nextReps;
   }
 
   return createProgram({
