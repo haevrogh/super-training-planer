@@ -1,87 +1,161 @@
-// Pure function — classic 5x5→3x3 linear periodization
-
 import {
   createProgram,
   createProgramWeek,
   createProgramSession,
 } from '../../models.js';
-import { roundToDumbbell } from '../helpers/dumbbellRounding.js';
 import {
-  resolveIntensityPercent,
+  roundToStep,
+  getWorkingWeight,
+  applyJunkVolumeCap,
+} from '../helpers/progressionCore.js';
+import {
   resolveSessionDays,
-  resolveVolumeMultiplier,
   resolveRestInterval,
+  resolveGoalBlueprint,
+  resolveRecoverySetAdjustment,
+  resolveWeeklyProgressStep,
+  isDeloadWeek,
 } from '../helpers/trainingAdjustments.js';
 import { buildIntensitySummary } from '../helpers/intensitySummary.js';
+import { buildRpeGuide } from '../helpers/rpeGuidance.js';
 
 const DEFAULT_WEEKS = 6;
+const START_RPE = 7;
+const RPE_STEP = 0.5;
+const MAX_RPE = 9.5;
+const DELOAD_PERCENT = 0.6;
 
-const WEEK_CONFIGS = [
-  { label: 'Объём 1', percent: 0.72, sets: 5, reps: 5, rpe: '7.5-8' },
-  { label: 'Объём 2', percent: 0.78, sets: 5, reps: 5, rpe: '7.5-8' },
-  { label: 'Сила 1', percent: 0.82, sets: 4, reps: 4, rpe: '8' },
-  { label: 'Сила 2', percent: 0.86, sets: 4, reps: 4, rpe: '8-8.5' },
-  { label: 'Мощность', percent: 0.9, sets: 3, reps: 3, rpe: '8.5-9' },
-  { label: 'Тестовая неделя', testWeek: true },
-];
+function formatRpeLabel(value) {
+  if (!Number.isFinite(value)) {
+    return '7';
+  }
 
-function buildLinearSession(topLine, backoffLines, sessionDays, intensitySummary, restInterval) {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+}
+
+function buildSessions({
+  sessionDays,
+  topSet,
+  backoffSets,
+  intensitySummary,
+  restInterval,
+  rpeGuide,
+  coachingNotes,
+}) {
   return sessionDays.map((dayLabel) =>
     createProgramSession({
       dayLabel,
-      topSet: topLine,
-      backoffSets: [...backoffLines],
+      topSet,
+      backoffSets: [...backoffSets],
       intensitySummary,
       restInterval,
+      rpeGuide,
+      coachingNotes,
     }),
   );
 }
 
-function buildLinearWeek(weekNumber, config, oneRm, userInput, sessionDays, volumeMultiplier) {
-  if (config.testWeek) {
-    const restInterval = resolveRestInterval(userInput);
-    const sessions = buildLinearSession(
-      'Тестовая неделя (до тяжёлых троек/синглов)',
-      [],
-      sessionDays,
-      null,
-      restInterval,
-    );
-
-    return createProgramWeek({
-      weekNumber,
-      sessions,
-    });
-  }
-
-  const intensityPercent = resolveIntensityPercent(config.percent, userInput);
-  const workingWeight = oneRm > 0 ? roundToDumbbell(oneRm * intensityPercent) : 0;
-  const topSetLine = `${workingWeight}×${config.reps} @ RPE ${config.rpe}`;
-  const totalSets = Math.max(1, Math.round(config.sets * volumeMultiplier));
-  const remainingSets = Math.max(0, totalSets - 1);
-  const backoffLine = `${workingWeight}×${config.reps} @ RPE ${config.rpe}`;
-  const backoffSets = Array.from({ length: remainingSets }, () => backoffLine);
+function buildDeloadWeek({
+  weekNumber,
+  sessionDays,
+  userInput,
+  baseReps,
+  baseWeight,
+}) {
+  const deloadWeight = roundToStep(baseWeight * DELOAD_PERCENT);
+  const topSet = `${deloadWeight}×${baseReps} @ RPE 6-7`;
+  const backoffSets = ['Фокус на технике и скорости'];
   const intensitySummary = buildIntensitySummary({
-    topWeight: workingWeight,
-    topReps: config.reps,
-    backoffWeight: workingWeight,
-    backoffReps: config.reps,
-    backoffSets: remainingSets,
-    intensityPercent,
-    oneRm,
-    rpe: config.rpe,
+    topWeight: deloadWeight,
+    topReps: baseReps,
+    backoffWeight: deloadWeight,
+    backoffReps: baseReps,
+    backoffSets: 1,
+    intensityPercent: 0.6,
+    oneRm: baseWeight / 0.85 || 0,
+    rpe: '6-7',
   });
   const restInterval = resolveRestInterval(userInput, {
-    reps: config.reps,
-    intensityPercent,
+    reps: baseReps,
+    intensityPercent: 0.6,
   });
-  const sessions = buildLinearSession(
-    topSetLine,
-    backoffSets,
+  const rpeGuide = buildRpeGuide('6-7', userInput.experienceLevel);
+  const coachingNotes = ['Делoad: снижаем вес до 60% и выполняем 2 лёгких подхода.'];
+
+  const sessions = buildSessions({
     sessionDays,
+    topSet,
+    backoffSets,
     intensitySummary,
     restInterval,
-  );
+    rpeGuide,
+    coachingNotes,
+  });
+
+  return createProgramWeek({
+    weekNumber,
+    sessions,
+  });
+}
+
+function buildWorkWeek({
+  weekNumber,
+  projectedOneRm,
+  sessionDays,
+  userInput,
+  targetSets,
+  goalBlueprint,
+  weeklyStep,
+}) {
+  const currentRpe = Math.min(START_RPE + weekNumber * RPE_STEP, MAX_RPE);
+  const rpeLabel = formatRpeLabel(currentRpe);
+  const workingWeight = getWorkingWeight(projectedOneRm, goalBlueprint.reps, currentRpe);
+  const basePercent = projectedOneRm > 0 && workingWeight > 0 ? workingWeight / projectedOneRm : 0.75;
+  const volumeGuard = applyJunkVolumeCap({
+    sets: targetSets,
+    reps: goalBlueprint.reps,
+    intensityPercent: basePercent,
+  });
+  const finalPercent = volumeGuard.intensityPercent || basePercent;
+  const finalWeight = projectedOneRm > 0 ? roundToStep(projectedOneRm * finalPercent) : workingWeight;
+  const totalSets = Math.max(1, volumeGuard.sets);
+  const remainingSets = Math.max(0, totalSets - 1);
+  const reps = volumeGuard.reps;
+  const topSet = `${finalWeight}×${reps} @ RPE ${rpeLabel}`;
+  const backoffLine = `${finalWeight}×${reps} @ RPE ${rpeLabel}`;
+  const backoffSets = Array.from({ length: remainingSets }, () => backoffLine);
+  const restInterval = resolveRestInterval(userInput, {
+    reps,
+    intensityPercent: finalPercent,
+  });
+  const rpeGuide = buildRpeGuide(rpeLabel, userInput.experienceLevel);
+  const projectedPercentGrowth = Math.round(weeklyStep * weekNumber * 1000) / 10;
+  const coachingNotes = [
+    `Цель недели: ${totalSets}×${reps} @ RPE ${rpeLabel}.`,
+    projectedPercentGrowth > 0
+      ? `Прогноз роста 1ПМ ≈ +${projectedPercentGrowth}%`
+      : 'Держим технику и скорость.',
+  ];
+  const intensitySummary = buildIntensitySummary({
+    topWeight: finalWeight,
+    topReps: reps,
+    backoffWeight: finalWeight,
+    backoffReps: reps,
+    backoffSets: remainingSets,
+    intensityPercent: finalPercent,
+    oneRm: projectedOneRm,
+    rpe: rpeLabel,
+  });
+
+  const sessions = buildSessions({
+    sessionDays,
+    topSet,
+    backoffSets,
+    intensitySummary,
+    restInterval,
+    rpeGuide,
+    coachingNotes,
+  });
 
   return createProgramWeek({
     weekNumber,
@@ -92,32 +166,51 @@ function buildLinearWeek(weekNumber, config, oneRm, userInput, sessionDays, volu
 export function generateLinear5x5Program(userInput, oneRm) {
   const safeOneRm = Number(oneRm) || 0;
   const requestedWeeks = Number(userInput?.weeks);
-  const normalizedWeeks =
-    Number.isFinite(requestedWeeks) && requestedWeeks > 0
-      ? requestedWeeks
-      : DEFAULT_WEEKS;
-  const totalWeeks = Math.min(normalizedWeeks, WEEK_CONFIGS.length);
+  const totalWeeks = Number.isFinite(requestedWeeks) && requestedWeeks > 0
+    ? Math.min(requestedWeeks, 10)
+    : DEFAULT_WEEKS;
   const sessionDays = resolveSessionDays(userInput);
-  const volumeMultiplier = resolveVolumeMultiplier(userInput);
+  const goalBlueprint = resolveGoalBlueprint(userInput);
+  const volumeAdjustment = resolveRecoverySetAdjustment(userInput);
+  const targetSets = Math.max(3, goalBlueprint.baseSets + volumeAdjustment);
+  const weeklyStep = resolveWeeklyProgressStep(userInput);
+  const baseWeight = getWorkingWeight(safeOneRm, goalBlueprint.reps, START_RPE) || safeOneRm;
 
   const weeks = [];
 
   for (let i = 0; i < totalWeeks; i += 1) {
+    const weekNumber = i + 1;
+    const projectedOneRm = safeOneRm > 0 ? safeOneRm * (1 + weeklyStep * weekNumber) : baseWeight;
+
+    if (isDeloadWeek(weekNumber, userInput)) {
+      weeks.push(
+        buildDeloadWeek({
+          weekNumber,
+          sessionDays,
+          userInput,
+          baseReps: goalBlueprint.reps,
+          baseWeight: baseWeight || projectedOneRm,
+        }),
+      );
+      continue;
+    }
+
     weeks.push(
-      buildLinearWeek(
-        i + 1,
-        WEEK_CONFIGS[i],
-        safeOneRm,
-        userInput,
+      buildWorkWeek({
+        weekNumber,
+        projectedOneRm,
         sessionDays,
-        volumeMultiplier,
-      ),
+        userInput,
+        targetSets,
+        goalBlueprint,
+        weeklyStep,
+      }),
     );
   }
 
   return createProgram({
     id: 'linear-5x5',
-    name: 'Линейная 5×5 → 3×3',
+    name: 'Классическая линейная прогрессия',
     userInput: userInput || null,
     oneRm: safeOneRm,
     weeks,

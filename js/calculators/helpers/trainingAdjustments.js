@@ -39,6 +39,33 @@ const EXPERIENCE_PROGRESS_RATES = {
   advanced: 0.6,
 };
 
+const WEEKLY_PROGRESS_STEPS = {
+  novice: 0.025,
+  intermediate: 0.015,
+  advanced: 0.005,
+};
+
+const RECOVERY_SET_MODIFIERS = {
+  limited: -1,
+  balanced: 0,
+  gifted: 1,
+};
+
+const GOAL_BLUEPRINTS = {
+  strength: { reps: 5, baseSets: 4, rest: '3–5 мин' },
+  hypertrophy: { reps: 10, baseSets: 3, rest: '2–3 мин' },
+  endurance: { reps: 12, baseSets: 3, rest: '90–120 сек' },
+};
+
+const DELOAD_FREQUENCY = {
+  novice: 4,
+  intermediate: 5,
+  advanced: 6,
+};
+
+const REST_GUIDANCE_NOTE =
+  'Если пульс или дыхание не восстановились — отдыхайте дольше, таймер лишь ориентир.';
+
 const SESSION_DAY_TEMPLATES = {
   2: ['Пн', 'Чт'],
   3: ['Пн', 'Ср', 'Пт'],
@@ -163,3 +190,28 @@ export function resolveRestInterval(userInput = {}, context = {}) {
 
   return DEFAULT_REST_INTERVAL;
 }
+
+export function resolveWeeklyProgressStep(userInput = {}) {
+  return WEEKLY_PROGRESS_STEPS[userInput.experienceLevel] || WEEKLY_PROGRESS_STEPS.intermediate;
+}
+
+export function resolveRecoverySetAdjustment(userInput = {}) {
+  return RECOVERY_SET_MODIFIERS[userInput.talentLevel] || 0;
+}
+
+export function resolveGoalBlueprint(userInput = {}) {
+  return GOAL_BLUEPRINTS[userInput.goal] || GOAL_BLUEPRINTS.strength;
+}
+
+export function isDeloadWeek(weekNumber, userInput = {}) {
+  const week = Number(weekNumber);
+  const frequency = DELOAD_FREQUENCY[userInput.experienceLevel] || DELOAD_FREQUENCY.intermediate;
+
+  if (!Number.isFinite(week) || week <= 1) {
+    return false;
+  }
+
+  return week % frequency === 0;
+}
+
+export { REST_GUIDANCE_NOTE };

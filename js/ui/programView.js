@@ -1,5 +1,7 @@
 // UI rendering of program weeks and sessions
 
+import { REST_GUIDANCE_NOTE } from '../calculators/helpers/trainingAdjustments.js';
+
 const RESULT_CONTAINER_ID = 'result';
 const numberFormatter = new Intl.NumberFormat('ru-RU');
 const METRIC_CONFIGS = [
@@ -358,7 +360,48 @@ function createRestSection(restInterval) {
   value.className = 'session-rest__value';
   value.textContent = restInterval;
 
-  wrapper.append(label, value);
+  const rule = document.createElement('span');
+  rule.className = 'session-rest__rule';
+  rule.textContent = REST_GUIDANCE_NOTE;
+
+  wrapper.append(label, value, rule);
+  return wrapper;
+}
+
+function createRpeGuideSection(rpeGuide) {
+  if (!rpeGuide) {
+    return null;
+  }
+
+  const paragraph = document.createElement('p');
+  paragraph.className = 'session-rpe-guide';
+  paragraph.textContent = rpeGuide;
+  return paragraph;
+}
+
+function createCoachingNotesSection(notes) {
+  if (!Array.isArray(notes) || notes.length === 0) {
+    return null;
+  }
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'session-notes';
+
+  const title = document.createElement('div');
+  title.className = 'session-notes__title';
+  title.textContent = 'Подсказки тренера';
+
+  const list = document.createElement('ul');
+  list.className = 'session-notes__list';
+
+  notes.forEach((note) => {
+    const item = document.createElement('li');
+    item.className = 'session-notes__item';
+    item.textContent = note;
+    list.appendChild(item);
+  });
+
+  wrapper.append(title, list);
   return wrapper;
 }
 
@@ -440,6 +483,8 @@ function createSessionCard(session) {
 
   const intensitySummary = createIntensitySummary(session?.intensitySummary);
   const workSetsSection = createWorkSetsSection(session || {});
+  const rpeGuideSection = createRpeGuideSection(session?.rpeGuide);
+  const notesSection = createCoachingNotesSection(session?.coachingNotes);
   const restSection = createRestSection(session?.restInterval);
 
   const sessionLabel = session?.dayLabel ? `Тренировка ${session.dayLabel}` : 'Тренировка';
@@ -451,6 +496,14 @@ function createSessionCard(session) {
   }
 
   card.appendChild(workSetsSection);
+
+  if (rpeGuideSection) {
+    card.appendChild(rpeGuideSection);
+  }
+
+  if (notesSection) {
+    card.appendChild(notesSection);
+  }
 
   if (restSection) {
     card.appendChild(restSection);

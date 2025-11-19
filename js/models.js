@@ -40,6 +40,8 @@ export function createProgramSession({
   backoffSets,
   intensitySummary,
   restInterval,
+  rpeGuide,
+  coachingNotes,
 } = {}) {
   return {
     dayLabel: dayLabel || '',
@@ -47,5 +49,7 @@ export function createProgramSession({
     backoffSets: Array.isArray(backoffSets) ? backoffSets : [],
     intensitySummary: intensitySummary || null,
     restInterval: restInterval || '',
+    rpeGuide: rpeGuide || null,
+    coachingNotes: Array.isArray(coachingNotes) ? coachingNotes : [],
   };
 }

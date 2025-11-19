@@ -380,6 +380,48 @@ label {
   color: #0071e3;
 }
 
+.session-rest__rule {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.8rem;
+  color: var(--subtext);
+}
+
+.session-rpe-guide {
+  margin-top: 6px;
+  font-size: 0.85rem;
+  color: #7a7a80;
+  background: #f4f4f8;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+}
+
+.session-notes {
+  margin-top: var(--space-sm);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  background: #fdfdfd;
+}
+
+.session-notes__title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--text);
+}
+
+.session-notes__list {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--subtext);
+  font-size: 0.9rem;
+}
+
+.session-notes__item {
+  margin-bottom: 4px;
+}
+
 .program-charts {
   display: flex;
   flex-direction: column;
