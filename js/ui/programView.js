@@ -5,9 +5,14 @@ import { REST_GUIDANCE_NOTE } from '../calculators/helpers/trainingAdjustments.j
 const RESULT_CONTAINER_ID = 'result';
 const numberFormatter = new Intl.NumberFormat('ru-RU');
 const METRIC_CONFIGS = [
-  { key: 'tonnage', label: 'Суммарный тоннаж', unit: 'кг' },
-  { key: 'normalizedLoadVolume', label: 'NLV — нормализованный объём', unit: 'кг' },
-  { key: 'mti', label: 'MTI (условные ед.)', unit: 'ед.' },
+  { key: 'tonnage', label: 'Суммарный тоннаж', unit: 'кг', color: '#7c3aed' },
+  {
+    key: 'normalizedLoadVolume',
+    label: 'NLV — нормализованный объём',
+    unit: 'кг',
+    color: '#0a84ff',
+  },
+  { key: 'mti', label: 'MTI (условные ед.)', unit: 'ед.', color: '#16a34a' },
 ];
 
 let chartInstanceCounter = 0;
@@ -24,24 +29,6 @@ function formatMetricValue(value, unit) {
 
   const formatted = numberFormatter.format(value);
   return unit ? `${formatted} ${unit}` : formatted;
-}
-
-function computeLogScaleHeight(value, maxValue) {
-  const numericValue = Number(value);
-  const numericMax = Number(maxValue);
-
-  if (!Number.isFinite(numericValue) || !Number.isFinite(numericMax) || numericValue <= 0 || numericMax <= 0) {
-    return 0;
-  }
-
-  const safeValue = Math.log10(numericValue + 1);
-  const safeMax = Math.log10(numericMax + 1);
-
-  if (safeMax <= 0) {
-    return 0;
-  }
-
-  return Math.max(0, Math.min((safeValue / safeMax) * 100, 100));
 }
 
 function aggregateWeekMetrics(program) {
@@ -92,53 +79,174 @@ function aggregateWeekMetrics(program) {
     .filter(Boolean);
 }
 
-function createChartCard(metricConfig, aggregatedWeeks) {
-  const values = aggregatedWeeks.map((week) => Number(week[metricConfig.key]) || 0);
-  const maxValue = Math.max(...values);
+function normalizeTrend(values) {
+  const finiteValues = values.filter((value) => Number.isFinite(value));
 
-  if (!Number.isFinite(maxValue) || maxValue <= 0) {
+  if (finiteValues.length === 0) {
+    return [];
+  }
+
+  const min = Math.min(...finiteValues);
+  const max = Math.max(...finiteValues);
+
+  if (!Number.isFinite(min) || !Number.isFinite(max)) {
+    return [];
+  }
+
+  if (max === min) {
+    return values.map(() => 50);
+  }
+
+  return values.map((value) => Math.max(0, Math.min(((value - min) / (max - min)) * 100, 100)));
+}
+
+function formatTrendChange(values) {
+  if (!Array.isArray(values) || values.length < 2) {
+    return 'нет данных для динамики';
+  }
+
+  const start = values[0];
+  const end = values[values.length - 1];
+  const delta = end - start;
+
+  if (!Number.isFinite(start) || !Number.isFinite(end) || Math.abs(delta) < 0.1) {
+    return 'без изменений';
+  }
+
+  const direction = delta > 0 ? 'рост' : 'падение';
+  return `${direction} ${Math.abs(delta).toFixed(0)}%`;
+}
+
+function createTrendChart(aggregatedWeeks) {
+  if (aggregatedWeeks.length === 0) {
     return null;
   }
 
-  const card = document.createElement('div');
-  card.className = 'chart-card';
+  const series = METRIC_CONFIGS.map((config) => {
+    const values = aggregatedWeeks.map((week) => Number(week[config.key]) || 0);
+    const normalized = normalizeTrend(values);
+
+    if (normalized.length === 0) {
+      return null;
+    }
+
+    return { ...config, values, normalized };
+  }).filter(Boolean);
+
+  if (series.length === 0) {
+    return null;
+  }
+
+  const chartWidth = 1000;
+  const chartHeight = 260;
+  const padding = 32;
+  const innerWidth = chartWidth - padding * 2;
+  const innerHeight = chartHeight - padding * 2;
+  const step = aggregatedWeeks.length > 1 ? innerWidth / (aggregatedWeeks.length - 1) : 0;
+
+  const container = document.createElement('div');
+  container.className = 'chart-card chart-card--trend';
 
   const title = document.createElement('h4');
   title.className = 'chart-card__title';
-  title.textContent = metricConfig.label;
-  card.appendChild(title);
+  title.textContent = 'Тренд нагрузок по неделям';
+  container.appendChild(title);
 
-  const bars = document.createElement('div');
-  bars.className = 'chart-bars';
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', `0 0 ${chartWidth} ${chartHeight}`);
+  svg.setAttribute('role', 'img');
+  svg.setAttribute('aria-label', 'Относительная динамика тоннажа, NLV и MTI по неделям');
+  svg.classList.add('trend-chart');
 
-  aggregatedWeeks.forEach((week, index) => {
-    const value = values[index];
-    const wrapper = document.createElement('div');
-    wrapper.className = 'chart-bar-wrapper';
+  const grid = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  grid.setAttribute('class', 'trend-chart__grid');
 
-    const bar = document.createElement('div');
-    bar.className = 'chart-bar';
-    const height = computeLogScaleHeight(value, maxValue);
-    bar.style.height = `${height}%`;
-
-    const formattedValue = formatMetricValue(value, metricConfig.unit);
-    bar.title = `${week.weekLabel}: ${formattedValue}`;
-    bar.setAttribute('aria-label', `${week.weekLabel}: ${formattedValue}`);
-
-    const valueLabel = document.createElement('span');
-    valueLabel.className = 'chart-bar__value';
-    valueLabel.textContent = formattedValue;
-
-    const weekLabel = document.createElement('span');
-    weekLabel.className = 'chart-bar__label';
-    weekLabel.textContent = week.weekLabel;
-
-    wrapper.append(bar, valueLabel, weekLabel);
-    bars.appendChild(wrapper);
+  [0, 25, 50, 75, 100].forEach((percent) => {
+    const y = padding + (1 - percent / 100) * innerHeight;
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', padding);
+    line.setAttribute('y1', y);
+    line.setAttribute('x2', chartWidth - padding);
+    line.setAttribute('y2', y);
+    line.setAttribute('aria-hidden', 'true');
+    grid.appendChild(line);
   });
 
-  card.appendChild(bars);
-  return card;
+  svg.appendChild(grid);
+
+  series.forEach((metric) => {
+    const pathData = metric.normalized
+      .map((value, index) => {
+        const x = padding + step * index;
+        const y = padding + (1 - value / 100) * innerHeight;
+        return `${index === 0 ? 'M' : 'L'}${x},${y}`;
+      })
+      .join(' ');
+
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', pathData);
+    path.setAttribute('class', 'trend-chart__line');
+    path.setAttribute('stroke', metric.color);
+    path.setAttribute('aria-label', `${metric.label} — ${formatTrendChange(metric.normalized)}`);
+    svg.appendChild(path);
+
+    metric.normalized.forEach((value, index) => {
+      const x = padding + step * index;
+      const y = padding + (1 - value / 100) * innerHeight;
+      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      circle.setAttribute('cx', x);
+      circle.setAttribute('cy', y);
+      circle.setAttribute('r', 6);
+      circle.setAttribute('fill', '#fff');
+      circle.setAttribute('stroke', metric.color);
+      circle.setAttribute('stroke-width', '2');
+
+      const tooltip = `${metric.label} — ${formatTrendChange(metric.normalized)}. ${
+        aggregatedWeeks[index]?.weekLabel || ''
+      }`;
+      circle.setAttribute('aria-label', tooltip.trim());
+      circle.setAttribute('role', 'img');
+      circle.title = tooltip.trim();
+      svg.appendChild(circle);
+    });
+  });
+
+  container.appendChild(svg);
+
+  const legend = document.createElement('div');
+  legend.className = 'trend-legend';
+
+  series.forEach((metric) => {
+    const item = document.createElement('div');
+    item.className = 'trend-legend__item';
+
+    const swatch = document.createElement('span');
+    swatch.className = 'trend-legend__swatch';
+    swatch.style.backgroundColor = metric.color;
+
+    const label = document.createElement('span');
+    label.className = 'trend-legend__label';
+    label.textContent = metric.label;
+
+    const trend = document.createElement('span');
+    trend.className = 'trend-legend__trend';
+    trend.textContent = formatTrendChange(metric.normalized);
+
+    item.append(swatch, label, trend);
+    legend.appendChild(item);
+  });
+
+  const weeks = document.createElement('div');
+  weeks.className = 'trend-weeks';
+  aggregatedWeeks.forEach((week) => {
+    const label = document.createElement('span');
+    label.className = 'trend-weeks__item';
+    label.textContent = week.weekLabel;
+    weeks.appendChild(label);
+  });
+
+  container.append(legend, weeks);
+  return container;
 }
 
 function createChartsSection(program) {
@@ -148,11 +256,9 @@ function createChartsSection(program) {
     return null;
   }
 
-  const chartCards = METRIC_CONFIGS.map((config) =>
-    createChartCard(config, aggregatedWeeks),
-  ).filter(Boolean);
+  const trendChart = createTrendChart(aggregatedWeeks);
 
-  if (chartCards.length === 0) {
+  if (!trendChart) {
     return null;
   }
 
@@ -178,12 +284,12 @@ function createChartsSection(program) {
 
   const grid = document.createElement('div');
   grid.className = 'chart-grid';
-  chartCards.forEach((card) => grid.appendChild(card));
+  grid.appendChild(trendChart);
 
   const hint = document.createElement('p');
   hint.className = 'chart-hint';
   hint.textContent =
-    'Высота столбцов строится по логарифмической шкале, чтобы уместить разные нагрузки.';
+    'Линии показывают относительную динамику (0–100%) без точных значений, чтобы видеть тенденции роста/спада.';
 
   body.append(grid, hint);
 
