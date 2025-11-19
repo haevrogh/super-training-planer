@@ -12,6 +12,7 @@ import {
   resolveSessionDays,
   resolveVolumeMultiplier,
   resolveRestInterval,
+  resolveProgressRate,
 } from '../helpers/trainingAdjustments.js';
 import { buildIntensitySummary } from '../helpers/intensitySummary.js';
 
@@ -114,8 +115,13 @@ export function generateDoubleProgressionProgram(userInput, oneRm) {
   const totalSets = Math.max(2, Math.round(BASE_TOTAL_SETS * volumeMultiplier));
   const backoffSetsCount = Math.max(1, totalSets - 1);
 
+  const progressRate = resolveProgressRate(userInput);
+  const safeProgressRate = Number.isFinite(progressRate) && progressRate > 0 ? progressRate : 0.85;
+
   let currentWeight = baseWorkingWeight;
   let currentReps = repRange.start;
+  let repAccumulator = 0;
+  let weightAccumulator = 0;
 
   const weeks = [];
 
@@ -137,10 +143,24 @@ export function generateDoubleProgressionProgram(userInput, oneRm) {
     );
 
     if (reachedCap) {
-      currentWeight = getNextDumbbellWeight(currentWeight);
-      currentReps = repRange.start;
+      weightAccumulator += safeProgressRate;
+
+      if (weightAccumulator >= 1) {
+        currentWeight = getNextDumbbellWeight(currentWeight);
+        currentReps = repRange.start;
+        weightAccumulator -= 1;
+        repAccumulator = 0;
+      } else {
+        currentReps = repRange.end;
+      }
     } else {
-      currentReps = Math.min(currentReps + 1, repRange.end);
+      repAccumulator += safeProgressRate;
+      const wholeSteps = Math.floor(repAccumulator);
+
+      if (wholeSteps >= 1) {
+        currentReps = Math.min(currentReps + wholeSteps, repRange.end);
+        repAccumulator -= wholeSteps;
+      }
     }
   }
 
