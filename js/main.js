@@ -2,7 +2,11 @@
 
 import { initForm, onGenerateProgram } from './ui/form.js';
 import { createUserInput } from './models.js';
-import { calculateOneRm } from './calculators/oneRmCalculator.js';
+import {
+  calculateOneRm,
+  estimateOneRmVariants,
+  buildRepMaxes,
+} from './calculators/oneRmCalculator.js';
 import { renderProgram, clearProgram } from './ui/programView.js';
 import { generateTopSetProgram } from './calculators/schemes/topSetScheme.js';
 import { generateLinear5x5Program } from './calculators/schemes/linear5x5Scheme.js';
@@ -324,9 +328,14 @@ function handleGenerate(formInput) {
 
   saveLastFormState(formInput);
 
-  const estimatedOneRm = calculateOneRm(userInput.weight, userInput.reps);
+  const oneRmVariants = estimateOneRmVariants(userInput.weight, userInput.reps);
+  const estimatedOneRm =
+    oneRmVariants.epley || calculateOneRm(userInput.weight, userInput.reps);
   const generator = resolveSchemeGenerator(userInput.scheme);
   const program = generator(userInput, estimatedOneRm);
+  program.oneRm = estimatedOneRm;
+  program.oneRmVariants = oneRmVariants;
+  program.repMaxes = buildRepMaxes(estimatedOneRm);
 
   clearProgram();
   renderProgram(program);

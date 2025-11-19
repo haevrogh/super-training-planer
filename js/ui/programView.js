@@ -15,6 +15,14 @@ const METRIC_CONFIGS = [
   { key: 'mti', label: 'MTI (условные ед.)', unit: 'ед.', color: '#16a34a' },
 ];
 
+const FORMULA_LABELS = {
+  epley: 'Эпли',
+  brzycki: 'Бжицки',
+  lombardi: 'Ломбарди',
+  oconner: 'О’Коннер',
+  wendler: 'Вендлер',
+};
+
 let chartInstanceCounter = 0;
 let intensitySummaryCounter = 0;
 
@@ -29,6 +37,108 @@ function formatMetricValue(value, unit) {
 
   const formatted = numberFormatter.format(value);
   return unit ? `${formatted} ${unit}` : formatted;
+}
+
+function createSummaryCard(title, contentNode) {
+  const card = document.createElement('div');
+  card.className = 'summary-card';
+
+  const heading = document.createElement('h3');
+  heading.className = 'summary-card__title';
+  heading.textContent = title;
+  card.appendChild(heading);
+
+  card.appendChild(contentNode);
+  return card;
+}
+
+function createOneRmList(program) {
+  const list = document.createElement('dl');
+  list.className = 'summary-list';
+
+  const variants = program?.oneRmVariants || {};
+
+  Object.entries(variants).forEach(([key, value]) => {
+    if (!value) {
+      return;
+    }
+
+    const term = document.createElement('dt');
+    term.textContent = FORMULA_LABELS[key] || key;
+    const definition = document.createElement('dd');
+    definition.textContent = `${numberFormatter.format(value)} кг`;
+    list.appendChild(term);
+    list.appendChild(definition);
+  });
+
+  if (list.children.length === 0) {
+    const fallback = document.createElement('p');
+    fallback.textContent = 'Нет данных для расчёта 1RM';
+    return fallback;
+  }
+
+  return list;
+}
+
+function createRepMaxTable(program) {
+  const table = document.createElement('table');
+  table.className = 'repmax-table';
+  const header = document.createElement('thead');
+  header.innerHTML = '<tr><th>RM</th><th>% от 1RM</th><th>Вес</th></tr>';
+  table.appendChild(header);
+
+  const body = document.createElement('tbody');
+  const repMaxes = Array.isArray(program?.repMaxes) ? program.repMaxes : [];
+
+  if (repMaxes.length === 0) {
+    const row = document.createElement('tr');
+    const cell = document.createElement('td');
+    cell.colSpan = 3;
+    cell.textContent = 'Недостаточно данных для таблицы RM';
+    row.appendChild(cell);
+    body.appendChild(row);
+  } else {
+    repMaxes.forEach((item) => {
+      const row = document.createElement('tr');
+      const rmCell = document.createElement('td');
+      rmCell.textContent = `${item.reps}RM`;
+      const percentCell = document.createElement('td');
+      percentCell.textContent = `${item.percent}%`;
+      const weightCell = document.createElement('td');
+      weightCell.textContent = `${numberFormatter.format(item.weight)} кг`;
+      row.append(rmCell, percentCell, weightCell);
+      body.appendChild(row);
+    });
+  }
+
+  table.appendChild(body);
+  return table;
+}
+
+function buildProgramSummary(program) {
+  const hasVariants = program?.oneRmVariants && Object.keys(program.oneRmVariants).length > 0;
+  const hasRepMaxes = Array.isArray(program?.repMaxes) && program.repMaxes.length > 0;
+
+  if (!hasVariants && !hasRepMaxes) {
+    return null;
+  }
+
+  const summaryGrid = document.createElement('div');
+  summaryGrid.className = 'summary-grid';
+
+  if (hasVariants) {
+    summaryGrid.appendChild(
+      createSummaryCard('Оценка 1RM', createOneRmList(program)),
+    );
+  }
+
+  if (hasRepMaxes) {
+    summaryGrid.appendChild(
+      createSummaryCard('Реп-максы по процентам', createRepMaxTable(program)),
+    );
+  }
+
+  return summaryGrid;
 }
 
 function aggregateWeekMetrics(program) {
@@ -653,6 +763,12 @@ function buildProgramContainer(program) {
   title.textContent = `Программа: ${program?.name || 'План тренировки'}${titleSuffix}`;
 
   container.appendChild(title);
+
+  const summary = buildProgramSummary(program);
+
+  if (summary) {
+    container.appendChild(summary);
+  }
 
   if (weekCount === 0) {
     const emptyState = document.createElement('p');

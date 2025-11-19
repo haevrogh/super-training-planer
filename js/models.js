@@ -17,12 +17,22 @@ export function createUserInput(input = {}) {
   };
 }
 
-export function createProgram({ id, name, userInput, oneRm, weeks } = {}) {
+export function createProgram({
+  id,
+  name,
+  userInput,
+  oneRm,
+  weeks,
+  oneRmVariants,
+  repMaxes,
+} = {}) {
   return {
     id: id || '',
     name: name || '',
     userInput: userInput || null,
     oneRm: Number(oneRm) || 0,
+    oneRmVariants: oneRmVariants || null,
+    repMaxes: repMaxes || [],
     weeks: Array.isArray(weeks) ? weeks : [],
   };
 }
