@@ -48,7 +48,7 @@ function initializeProgressionState({ oneRm, repRange, userInput }) {
   const startWeight = determineInitialWeight(oneRm, repRange.start, userInput);
   const userWeight = Number(userInput?.weight);
   const userReps = Number(userInput?.reps);
-  const weightIncrement = roundToDumbbell(PROGRESSION_INCREMENT);
+  const weightIncrement = PROGRESSION_INCREMENT;
   const hasClearedRange =
     Number.isFinite(userWeight) &&
     Number.isFinite(userReps) &&
@@ -221,13 +221,14 @@ export function generateDoubleProgressionProgram(userInput, oneRm) {
     }
 
     const nextReps = currentReps + repStep;
-    const weightIncrement = roundToDumbbell(PROGRESSION_INCREMENT * progressRate);
+    const weightIncrement = PROGRESSION_INCREMENT * progressRate;
     const willIncreaseWeight = nextReps > repRange.end;
     const nextWeight = willIncreaseWeight
       ? roundToDumbbell(workingWeight + weightIncrement)
       : workingWeight;
+    const plannedIncrease = nextWeight - workingWeight;
     const progressNote = willIncreaseWeight
-      ? `SUCCESS: Increase weight by ${weightIncrement} кг next week.`
+      ? `SUCCESS: Increase weight by ${plannedIncrease} кг next week.`
       : `Продолжаем работу с этим весом, цель — ${nextReps} повт.`;
 
     weeks.push(
