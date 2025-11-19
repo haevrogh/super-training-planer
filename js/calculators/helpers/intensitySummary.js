@@ -108,6 +108,117 @@ function calculateSetMti({ weight, reps, percent1Rm, rpeInput }) {
   );
 }
 
+const MUSCLE_SPLITS = {
+  compound: {
+    legs: 0.3,
+    back: 0.25,
+    chest: 0.15,
+    shoulders: 0.1,
+    arms: 0.1,
+    core: 0.1,
+  },
+  isolation: {
+    chest: 0.25,
+    shoulders: 0.2,
+    arms: 0.25,
+    back: 0.15,
+    legs: 0.05,
+    core: 0.1,
+  },
+};
+
+const GOAL_MUSCLE_BIASES = {
+  strength: {
+    legs: 1.15,
+    back: 1.1,
+    chest: 0.95,
+    shoulders: 0.95,
+    arms: 0.9,
+    core: 1.05,
+  },
+  hypertrophy: {
+    legs: 1,
+    back: 1,
+    chest: 1.05,
+    shoulders: 1.05,
+    arms: 1.1,
+    core: 0.95,
+  },
+  endurance: {
+    legs: 1.05,
+    back: 1.05,
+    chest: 0.95,
+    shoulders: 0.95,
+    arms: 0.9,
+    core: 1.1,
+  },
+};
+
+export function resolveStressLabel(score) {
+  const safeScore = Number(score);
+
+  if (!Number.isFinite(safeScore)) {
+    return 'Unknown';
+  }
+
+  if (safeScore < 0.45) {
+    return 'Light';
+  }
+
+  if (safeScore < 0.7) {
+    return 'Moderate';
+  }
+
+  return 'High';
+}
+
+function calculateStressScore({ intensityPercent, totalReps, tonnage, rpeValue }) {
+  const normalizedIntensity = Math.min(Math.max(intensityPercent / 100, 0), 1);
+  const normalizedReps = Math.min(totalReps / 28, 1);
+  const normalizedTonnage = Math.min(tonnage / 20000, 1);
+  const normalizedRpe = Math.min(rpeValue / 10, 1);
+  const score =
+    normalizedIntensity * 0.55 + normalizedReps * 0.2 + normalizedTonnage * 0.15 + normalizedRpe * 0.1;
+
+  return Math.max(0, Math.min(score, 1));
+}
+
+function calculateRecoveryWindows({ stressScore, movementType }) {
+  const baseHours = movementType === 'isolation' ? 18 : 26;
+  const added = stressScore * (movementType === 'isolation' ? 14 : 22);
+  const recommendedRestHours = Math.round(baseHours + added);
+  const recommendedRestDays = Math.max(1, Math.round((recommendedRestHours / 24) * 10) / 10);
+  return {
+    recommendedRestHours,
+    recommendedRestDays,
+  };
+}
+
+function applyMuscleBiases(distribution, goal) {
+  const biases = GOAL_MUSCLE_BIASES[goal] || GOAL_MUSCLE_BIASES.strength;
+  const weightedEntries = Object.entries(distribution).map(([group, share]) => {
+    const bias = biases[group] || 1;
+    return [group, share * bias];
+  });
+
+  const total = weightedEntries.reduce((sum, [, value]) => sum + value, 0) || 1;
+
+  return weightedEntries.reduce((result, [group, value]) => {
+    result[group] = value / total;
+    return result;
+  }, {});
+}
+
+function calculateMuscleSplit(tonnage, movementType, goal) {
+  const baseSplit = MUSCLE_SPLITS[movementType] || MUSCLE_SPLITS.compound;
+  const adjustedSplit = applyMuscleBiases(baseSplit, goal);
+
+  return Object.entries(adjustedSplit).reduce((acc, [group, share]) => {
+    acc[group] = Math.round(tonnage * share);
+    return acc;
+  }, {});
+}
+
 export function buildIntensitySummary({
   topWeight,
   topReps,
@@ -117,6 +228,8 @@ export function buildIntensitySummary({
   intensityPercent,
   oneRm,
   rpe,
+  movementType,
+  goal,
 } = {}) {
   const safeTopWeight = safePositive(topWeight);
   const safeTopReps = safePositive(extractFirstNumber(topReps));
@@ -178,6 +291,18 @@ export function buildIntensitySummary({
   const velocityFactor = Math.max(0.2, 1 - relativeLoad * 0.7);
   const forceVelocity = Math.round(safeTopWeight * velocityFactor);
   const normalizedLoadVolume = Math.round(tonnage * (rpeValue / 10));
+  const stressScore = calculateStressScore({
+    intensityPercent: avgIntensity,
+    totalReps,
+    tonnage,
+    rpeValue,
+  });
+  const stressLabel = resolveStressLabel(stressScore);
+  const { recommendedRestHours, recommendedRestDays } = calculateRecoveryWindows({
+    stressScore,
+    movementType,
+  });
+  const tonnageByGroup = calculateMuscleSplit(tonnage, movementType, goal);
 
   return {
     tonnage: Math.round(tonnage),
@@ -185,5 +310,11 @@ export function buildIntensitySummary({
     mti: mechanicalTensionIndex,
     forceVelocity,
     normalizedLoadVolume,
+    tonnageByGroup,
+    stressLabel,
+    stressScore,
+    recommendedRestHours,
+    recommendedRestDays,
+    recoveryAdvice: `Отдохните ${recommendedRestHours} ч (~${recommendedRestDays} дн) перед следующей тяжёлой сессией`,
   };
 }

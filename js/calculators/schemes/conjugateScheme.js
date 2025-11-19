@@ -49,6 +49,8 @@ function buildMaxEffortSession({ dayLabel, projectedOneRm, userInput }) {
     intensityPercent: projectedOneRm ? topWeight / projectedOneRm : null,
     oneRm: projectedOneRm,
     rpe: MAX_EFFORT_RPE,
+    movementType: userInput?.movementType,
+    goal: userInput?.goal,
   });
 
   return createProgramSession({
@@ -85,6 +87,8 @@ function buildDynamicSession({ dayLabel, projectedOneRm, userInput }) {
     intensityPercent: projectedOneRm ? workingWeight / projectedOneRm : DYNAMIC_PERCENT,
     oneRm: projectedOneRm,
     rpe: '6-7',
+    movementType: userInput?.movementType,
+    goal: userInput?.goal,
   });
 
   return createProgramSession({
@@ -122,6 +126,8 @@ function buildRepetitionSession({ dayLabel, projectedOneRm, userInput }) {
     intensityPercent: projectedOneRm ? baseWeight / projectedOneRm : null,
     oneRm: projectedOneRm,
     rpe: REP_DAY_RPE,
+    movementType: userInput?.movementType,
+    goal: userInput?.goal,
   });
 
   return createProgramSession({
@@ -151,6 +157,8 @@ function buildDeloadWeek({ weekNumber, sessionDays, baseOneRm, userInput }) {
         intensityPercent: 0.6,
         oneRm: baseOneRm,
         rpe: '6-7',
+        movementType: userInput?.movementType,
+        goal: userInput?.goal,
       }),
       restInterval: resolveRestInterval(userInput, { reps: 5, intensityPercent: 0.6 }),
       rpeGuide: buildRpeGuide('6-7', userInput.experienceLevel),

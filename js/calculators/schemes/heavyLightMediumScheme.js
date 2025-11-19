@@ -61,6 +61,8 @@ function buildSession({
     intensityPercent: oneRm ? weight / oneRm : null,
     oneRm,
     rpe,
+    movementType: userInput?.movementType,
+    goal: userInput?.goal,
   });
 
   return createProgramSession({

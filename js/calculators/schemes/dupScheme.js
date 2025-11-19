@@ -62,6 +62,8 @@ function buildDupletSession({
     intensityPercent: oneRm ? weight / oneRm : null,
     oneRm,
     rpe,
+    movementType: userInput?.movementType,
+    goal: userInput?.goal,
   });
   const rpeGuide = buildRpeGuide(String(rpe), userInput.experienceLevel);
   const coachingNotes = [`${focus} блок: держим технику и скорость.`];

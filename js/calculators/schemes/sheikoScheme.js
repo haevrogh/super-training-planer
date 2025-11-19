@@ -47,6 +47,8 @@ function buildSheikoSession({ dayLabel, oneRm, blocks, userInput }) {
     intensityPercent: topBlock.percent,
     oneRm,
     rpe: topBlock.rpe,
+    movementType: userInput?.movementType,
+    goal: userInput?.goal,
   });
   const coachingNotes = ['Волновая сессия Шейко: следите за чистой техникой и равномерным темпом.'];
 
@@ -77,6 +79,8 @@ function buildDeloadWeek({ weekNumber, sessionDays, baseOneRm, userInput }) {
         intensityPercent: 0.6,
         oneRm: baseOneRm,
         rpe: '6-7',
+        movementType: userInput?.movementType,
+        goal: userInput?.goal,
       }),
       restInterval: resolveRestInterval(userInput, { reps: 5, intensityPercent: 0.6 }),
       rpeGuide: buildRpeGuide('6-7', userInput.experienceLevel),
