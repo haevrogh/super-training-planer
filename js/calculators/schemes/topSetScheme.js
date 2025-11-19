@@ -1,122 +1,139 @@
-// Pure function — generate program using Top Set scheme
-
 import {
   createProgram,
   createProgramWeek,
   createProgramSession,
 } from '../../models.js';
 import {
-  roundToDumbbell,
-  getLowerDumbbellStep,
-} from '../helpers/dumbbellRounding.js';
+  roundToStep,
+  getWorkingWeight,
+  applyJunkVolumeCap,
+} from '../helpers/progressionCore.js';
 import {
-  resolveIntensityPercent,
   resolveSessionDays,
-  resolveVolumeMultiplier,
   resolveRestInterval,
+  resolveGoalBlueprint,
+  resolveRecoverySetAdjustment,
+  resolveWeeklyProgressStep,
+  isDeloadWeek,
 } from '../helpers/trainingAdjustments.js';
 import { buildIntensitySummary } from '../helpers/intensitySummary.js';
+import { buildRpeGuide } from '../helpers/rpeGuidance.js';
 
 const DEFAULT_WEEKS = 6;
-const WEEK_CONFIGS = [
-  {
-    label: 'Аккумуляция 1',
-    percent: 0.74,
-    reps: '6-8',
-    rpe: '7-8',
-    backoff: { sets: 2, reps: 6, rpe: '6-7' },
-  },
-  {
-    label: 'Аккумуляция 2',
-    percent: 0.78,
-    reps: '6-8',
-    rpe: '7-8',
-    backoff: { sets: 2, reps: 6, rpe: '6-7' },
-  },
-  {
-    label: 'Трансмутация',
-    percent: 0.84,
-    reps: '4',
-    rpe: '~8',
-    backoff: { sets: 2, reps: 4, rpe: '~7' },
-  },
-  {
-    label: 'Тяжёлые тройки',
-    percent: 0.88,
-    reps: '3',
-    rpe: '8-9',
-    backoff: { sets: 2, reps: 3, rpe: '7-8' },
-  },
-  {
-    label: 'Пиковые двойки',
-    percent: 0.92,
-    reps: '2-3',
-    rpe: '~9',
-    backoff: { sets: 2, reps: 2, rpe: '8-9' },
-  },
-  {
-    label: 'Тестовая неделя',
-    testWeek: true,
-  },
-];
+const TOP_SET_REPS = 5;
+const BACKOFF_REPS = 8;
+const TOP_SET_RPE = 9;
+const BACKOFF_PERCENT = 0.9;
+const BACKOFF_RPE = '7-8';
+const DELOAD_PERCENT = 0.6;
 
-function buildSession(topSetLine, backoffSetLines, sessionDays, summary, restInterval) {
+function buildSessions({
+  sessionDays,
+  topSet,
+  backoffSets,
+  intensitySummary,
+  restInterval,
+  rpeGuide,
+  coachingNotes,
+}) {
   return sessionDays.map((dayLabel) =>
     createProgramSession({
       dayLabel,
-      topSet: topSetLine,
-      backoffSets: [...backoffSetLines],
-      intensitySummary: summary,
+      topSet,
+      backoffSets: [...backoffSets],
+      intensitySummary,
       restInterval,
+      rpeGuide,
+      coachingNotes,
     }),
   );
 }
 
-function buildWeekPayload(weekNumber, config, oneRm, userInput, sessionDays, volumeMultiplier) {
-  if (config.testWeek) {
-    const restInterval = resolveRestInterval(userInput);
-    const sessions = buildSession(
-      'Тестовая неделя (1–2 тяжёлых сингла)',
-      [],
-      sessionDays,
-      null,
-      restInterval,
-    );
-
-    return createProgramWeek({
-      weekNumber,
-      sessions,
-    });
-  }
-
-  const intensityPercent = resolveIntensityPercent(config.percent, userInput);
-  const topSetWeight = oneRm > 0 ? roundToDumbbell(oneRm * intensityPercent) : 0;
-  const topSetLine = `${topSetWeight}×${config.reps} @ RPE ${config.rpe}`;
-  const backoffWeight = topSetWeight > 0 ? getLowerDumbbellStep(topSetWeight) : 0;
-  const backoffLine = `${backoffWeight}×${config.backoff.reps} @ RPE ${config.backoff.rpe}`;
-  const totalBackoffSets = Math.max(1, Math.round(config.backoff.sets * volumeMultiplier));
-  const backoffSets = Array.from({ length: totalBackoffSets }, () => backoffLine);
+function buildDeloadWeek({ weekNumber, sessionDays, userInput, baseWeight }) {
+  const deloadTop = roundToStep(baseWeight * DELOAD_PERCENT);
+  const topSet = `${deloadTop}×${TOP_SET_REPS} @ RPE 6-7`;
+  const backoffLine = `${deloadTop}×${BACKOFF_REPS} @ RPE 6-7`;
+  const backoffSets = [backoffLine];
   const restInterval = resolveRestInterval(userInput, {
-    reps: config.reps,
-    intensityPercent,
+    reps: BACKOFF_REPS,
+    intensityPercent: 0.6,
   });
+  const coachingNotes = ['Разгрузочная неделя — держим вес 60% и 2 подхода.'];
+  const rpeGuide = buildRpeGuide('6-7', userInput.experienceLevel);
   const intensitySummary = buildIntensitySummary({
-    topWeight: topSetWeight,
-    topReps: config.reps,
-    backoffWeight,
-    backoffReps: config.backoff.reps,
-    backoffSets: totalBackoffSets,
-    intensityPercent,
-    oneRm,
-    rpe: config.rpe,
+    topWeight: deloadTop,
+    topReps: TOP_SET_REPS,
+    backoffWeight: deloadTop,
+    backoffReps: BACKOFF_REPS,
+    backoffSets: backoffSets.length,
+    intensityPercent: 0.6,
+    oneRm: baseWeight / 0.9 || 0,
+    rpe: '6-7',
   });
-  const sessions = buildSession(
-    topSetLine,
-    backoffSets,
+
+  const sessions = buildSessions({
     sessionDays,
+    topSet,
+    backoffSets,
     intensitySummary,
     restInterval,
-  );
+    rpeGuide,
+    coachingNotes,
+  });
+
+  return createProgramWeek({
+    weekNumber,
+    sessions,
+  });
+}
+
+function buildWorkWeek({
+  weekNumber,
+  projectedOneRm,
+  sessionDays,
+  userInput,
+  totalSets,
+}) {
+  const topWeight = getWorkingWeight(projectedOneRm, TOP_SET_REPS, TOP_SET_RPE);
+  const backoffWeight = roundToStep(topWeight * BACKOFF_PERCENT);
+  const guard = applyJunkVolumeCap({
+    sets: totalSets,
+    reps: BACKOFF_REPS,
+    intensityPercent: projectedOneRm > 0 ? backoffWeight / projectedOneRm : 0.7,
+  });
+  const backoffSetsCount = Math.max(1, guard.sets - 1);
+  const restInterval = resolveRestInterval(userInput, {
+    reps: BACKOFF_REPS,
+    intensityPercent: guard.intensityPercent || backoffWeight / projectedOneRm,
+  });
+  const topSet = `${topWeight}×${TOP_SET_REPS} @ RPE ${TOP_SET_RPE}`;
+  const backoffLine = `${backoffWeight}×${guard.reps} @ RPE ${BACKOFF_RPE}`;
+  const backoffSets = Array.from({ length: backoffSetsCount }, () => backoffLine);
+  const rpeGuide = buildRpeGuide(String(TOP_SET_RPE), userInput.experienceLevel);
+  const coachingNotes = [
+    `Топ-сет: 1×${TOP_SET_REPS} @ RPE ${TOP_SET_RPE}.`,
+    `Добивка: ${backoffSetsCount}×${guard.reps} (-10% от топ-сета).`,
+  ];
+  const intensitySummary = buildIntensitySummary({
+    topWeight: topWeight,
+    topReps: TOP_SET_REPS,
+    backoffWeight,
+    backoffReps: guard.reps,
+    backoffSets: backoffSetsCount,
+    intensityPercent: guard.intensityPercent || backoffWeight / projectedOneRm,
+    oneRm: projectedOneRm,
+    rpe: TOP_SET_RPE,
+  });
+
+  const sessions = buildSessions({
+    sessionDays,
+    topSet,
+    backoffSets,
+    intensitySummary,
+    restInterval,
+    rpeGuide,
+    coachingNotes,
+  });
 
   return createProgramWeek({
     weekNumber,
@@ -127,20 +144,42 @@ function buildWeekPayload(weekNumber, config, oneRm, userInput, sessionDays, vol
 export function generateTopSetProgram(userInput, oneRm) {
   const safeOneRm = Number(oneRm) || 0;
   const requestedWeeks = Number(userInput?.weeks);
-  const normalizedWeeks =
-    Number.isFinite(requestedWeeks) && requestedWeeks > 0
-      ? requestedWeeks
-      : DEFAULT_WEEKS;
-  const totalWeeks = Math.min(normalizedWeeks, WEEK_CONFIGS.length);
+  const totalWeeks = Number.isFinite(requestedWeeks) && requestedWeeks > 0
+    ? Math.min(requestedWeeks, 10)
+    : DEFAULT_WEEKS;
   const sessionDays = resolveSessionDays(userInput);
-  const volumeMultiplier = resolveVolumeMultiplier(userInput);
+  const goalBlueprint = resolveGoalBlueprint(userInput);
+  const volumeAdjustment = resolveRecoverySetAdjustment(userInput);
+  const totalSets = Math.max(3, goalBlueprint.baseSets + volumeAdjustment);
+  const weeklyStep = resolveWeeklyProgressStep(userInput);
+  const baseWeight = getWorkingWeight(safeOneRm, TOP_SET_REPS, TOP_SET_RPE) || safeOneRm;
 
   const weeks = [];
 
   for (let i = 0; i < totalWeeks; i += 1) {
-    const config = WEEK_CONFIGS[i];
+    const weekNumber = i + 1;
+    const projectedOneRm = safeOneRm > 0 ? safeOneRm * (1 + weeklyStep * weekNumber) : baseWeight;
+
+    if (isDeloadWeek(weekNumber, userInput)) {
+      weeks.push(
+        buildDeloadWeek({
+          weekNumber,
+          sessionDays,
+          userInput,
+          baseWeight: baseWeight || projectedOneRm,
+        }),
+      );
+      continue;
+    }
+
     weeks.push(
-      buildWeekPayload(i + 1, config, safeOneRm, userInput, sessionDays, volumeMultiplier),
+      buildWorkWeek({
+        weekNumber,
+        projectedOneRm,
+        sessionDays,
+        userInput,
+        totalSets,
+      }),
     );
   }
 

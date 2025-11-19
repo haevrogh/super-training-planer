@@ -8,6 +8,14 @@ export function calculateOneRm(weight, reps) {
     return 0;
   }
 
+  if (safeWeight <= 0 || safeReps <= 0) {
+    return 0;
+  }
+
+  if (safeReps === 1) {
+    return Math.round(safeWeight);
+  }
+
   const estimate = safeWeight * (1 + safeReps / 30);
-  return Math.round(estimate * 10) / 10;
+  return Math.round(estimate);
 }
