@@ -20,8 +20,8 @@ import {
 } from '../helpers/progressionCore.js';
 import { buildIntensitySummary } from '../helpers/intensitySummary.js';
 import { buildRpeGuide } from '../helpers/rpeGuidance.js';
+import { resolveProgramDuration } from '../helpers/programDuration.js';
 
-const DEFAULT_WEEKS = 6;
 const STARTING_RPE = 8;
 const SESSION_RPE = 8.5;
 const PROGRESSION_INCREMENT = 2.5;
@@ -178,8 +178,7 @@ function buildWorkWeek({
 
 export function generateDoubleProgressionProgram(userInput, oneRm) {
   const safeOneRm = Number(oneRm) || 0;
-  const requestedWeeks = Number(userInput?.weeks) || DEFAULT_WEEKS;
-  const totalWeeks = Math.max(1, Math.min(requestedWeeks, 12));
+  const totalWeeks = resolveProgramDuration(userInput);
   const repRange = resolveDoubleProgressionRange(userInput);
   const sessionDays = resolveSessionDays(userInput);
   const goalBlueprint = resolveGoalBlueprint(userInput);

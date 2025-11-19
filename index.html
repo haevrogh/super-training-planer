@@ -109,17 +109,11 @@
             </div>
 
             <div class="form__row">
-              <label for="weeks-count">Кол-во недель</label>
-              <input
-                id="weeks-count"
-                name="weeks"
-                type="number"
-                min="1"
-                max="12"
-                step="1"
-                value="4"
-                class="ui-input"
-              />
+              <div class="form__row-label">Длительность программы</div>
+              <div id="program-duration" class="duration-preview" aria-live="polite">
+                Автоматический расчёт длительности
+              </div>
+              <p class="form__note">Подбирается по выбранной схеме и цели.</p>
             </div>
 
             <button

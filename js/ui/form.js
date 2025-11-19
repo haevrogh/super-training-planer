@@ -1,7 +1,13 @@
 // UI for input form — collects user data only
 
+import { resolveProgramDuration } from '../calculators/helpers/programDuration.js';
+import { formatWeeksLabel } from './formatters.js';
+
 let formElement;
 let generateButton;
+let durationPreviewElement;
+
+const DURATION_PREVIEW_ID = 'program-duration';
 
 function getFormElement() {
   if (formElement) {
@@ -21,6 +27,15 @@ function getGenerateButton() {
   return generateButton;
 }
 
+function getDurationPreviewElement() {
+  if (durationPreviewElement) {
+    return durationPreviewElement;
+  }
+
+  durationPreviewElement = document.getElementById(DURATION_PREVIEW_ID);
+  return durationPreviewElement;
+}
+
 export function initForm() {
   const form = getFormElement();
 
@@ -32,6 +47,32 @@ export function initForm() {
   form.addEventListener('submit', (event) => {
     event.preventDefault();
   });
+}
+
+function readDurationInput() {
+  const form = getFormElement();
+
+  if (!form) {
+    return {};
+  }
+
+  const formData = new FormData(form);
+  return {
+    goal: formData.get('goal') || 'strength',
+    scheme: formData.get('scheme') || 'top-set',
+  };
+}
+
+export function updateDurationPreview() {
+  const durationNode = getDurationPreviewElement();
+
+  if (!durationNode) {
+    return;
+  }
+
+  const previewInput = readDurationInput();
+  const totalWeeks = resolveProgramDuration(previewInput);
+  durationNode.textContent = `${formatWeeksLabel(totalWeeks)} · автоматический расчёт`;
 }
 
 export function readFormInput() {
@@ -50,7 +91,6 @@ export function readFormInput() {
   const talentLevel = formData.get('talentLevel') || 'balanced';
   const sessionsPerWeek = Number(formData.get('sessionsPerWeek')) || 2;
   const scheme = formData.get('scheme') || '';
-  const weeks = Number(formData.get('weeks')) || 0;
 
   if (!Number.isFinite(weight) || weight <= 0) {
     throw new Error('Вес должен быть больше нуля.');
@@ -73,7 +113,6 @@ export function readFormInput() {
     talentLevel,
     sessionsPerWeek,
     scheme,
-    weeks,
   };
 }
 

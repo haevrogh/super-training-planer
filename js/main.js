@@ -1,6 +1,6 @@
 // Main entry — wiring modules for the basic form flow
 
-import { initForm, onGenerateProgram } from './ui/form.js';
+import { initForm, onGenerateProgram, updateDurationPreview } from './ui/form.js';
 import { createUserInput } from './models.js';
 import {
   calculateOneRm,
@@ -18,6 +18,8 @@ import { generateSheikoStyleProgram } from './calculators/schemes/sheikoScheme.j
 import { generateConjugateProgram } from './calculators/schemes/conjugateScheme.js';
 import { loadPrograms, saveProgram, deleteProgram } from './storage.js';
 import { renderProgramList } from './ui/programList.js';
+import { resolveProgramDuration } from './calculators/helpers/programDuration.js';
+import { formatWeeksLabel } from './ui/formatters.js';
 
 const SCHEME_GENERATORS = {
   'top-set': generateTopSetProgram,
@@ -60,7 +62,6 @@ const FORM_STATE_FIELDS = [
   'talentLevel',
   'sessionsPerWeek',
   'scheme',
-  'weeks',
 ];
 
 let pendingProgram = null;
@@ -180,6 +181,8 @@ function applyLastFormState() {
       element.value = storedState[field];
     }
   });
+
+  updateDurationPreview();
 }
 
 function setupFormChangeHandler() {
@@ -193,6 +196,7 @@ function setupFormChangeHandler() {
     clearProgram();
     setPendingProgram(null);
     setCurrentProgram(null);
+    updateDurationPreview();
   };
 
   form.addEventListener('input', handleFormChange);
@@ -215,29 +219,6 @@ function resolveSchemeGenerator(schemeKey) {
   return generateTopSetProgram;
 }
 
-function formatWeeksLabel(weeks) {
-  if (!Number.isFinite(weeks) || weeks <= 0) {
-    return 'программа';
-  }
-
-  const remainder10 = weeks % 10;
-  const remainder100 = weeks % 100;
-
-  if (remainder10 === 1 && remainder100 !== 11) {
-    return `${weeks} неделя`;
-  }
-
-  if (
-    remainder10 >= 2 &&
-    remainder10 <= 4 &&
-    !(remainder100 >= 12 && remainder100 <= 14)
-  ) {
-    return `${weeks} недели`;
-  }
-
-  return `${weeks} недель`;
-}
-
 function translateMovementType(value) {
   if (MOVEMENT_TYPE_LABELS[value]) {
     return MOVEMENT_TYPE_LABELS[value];
@@ -254,11 +235,13 @@ function translateGoal(value) {
   return 'Цель';
 }
 
-function generateDefaultProgramName(userInput) {
-  const movement = translateMovementType(userInput?.movementType);
-  const goal = translateGoal(userInput?.goal);
-  const weeks = Number(userInput?.weeks) || 0;
-  const weeksLabel = formatWeeksLabel(weeks);
+function generateDefaultProgramName(program) {
+  const movement = translateMovementType(program?.userInput?.movementType);
+  const goal = translateGoal(program?.userInput?.goal);
+  const weeksCount = Array.isArray(program?.weeks)
+    ? program.weeks.length
+    : resolveProgramDuration(program?.userInput);
+  const weeksLabel = formatWeeksLabel(weeksCount);
   return `${movement} · ${goal} · ${weeksLabel}`;
 }
 
@@ -284,7 +267,7 @@ function persistProgram(program) {
     return null;
   }
 
-  const defaultName = generateDefaultProgramName(program.userInput);
+  const defaultName = generateDefaultProgramName(program);
   const programName = requestProgramName(defaultName);
   const persistedProgram = {
     ...program,
@@ -579,6 +562,7 @@ function setupCopyButton() {
 
 function init() {
   initForm();
+  updateDurationPreview();
   applyLastFormState();
   setupFormChangeHandler();
   onGenerateProgram(handleGenerate);

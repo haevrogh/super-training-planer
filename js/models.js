@@ -13,7 +13,6 @@ export function createUserInput(input = {}) {
     sessionsPerWeek:
       Number.isFinite(safeSessions) && safeSessions > 0 ? safeSessions : 2,
     scheme: input.scheme || '',
-    weeks: Number(input.weeks) || 0,
   };
 }
 
